@@ -1,0 +1,105 @@
+// ─── Datos Iniciales de Farmacia El Desierto ────────────────────────────────
+
+export const CATEGORIES = [
+  { id: 'analgesia', label: 'Analgesia', icon: '' },
+  { id: 'respiratorio', label: 'Respiratorio', icon: '' },
+  { id: 'vitaminas', label: 'Vitaminas', icon: '' },
+  { id: 'gastro', label: 'Gastro', icon: '' },
+  { id: 'dermatologia', label: 'Dermatología', icon: '' },
+  { id: 'diabetes', label: 'Diabetes', icon: '' },
+  { id: 'oftalmologia', label: 'Oftalmología', icon: '' },
+  { id: 'infantil', label: 'Infantil', icon: '' },
+  { id: 'cuidado-personal', label: 'Cuidado Personal', icon: '' },
+  { id: 'salud-sexual', label: 'Salud Sexual', icon: '' },
+];
+
+export const initialProducts = [
+  { id: 1, name: "Paracetamol 500mg", category: "analgesia", price: 12.50, stock: 120, image: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400&h=300", specs: "Analgésico y antipirético de amplio espectro indicado para el alivio del dolor leve a moderado y la fiebre. Presentación: caja con 20 tabletas.", featured: true },
+  { id: 2, name: "Ibuprofeno 400mg", category: "analgesia", price: 15.00, stock: 95, image: "https://images.unsplash.com/photo-1550572017-edd951aa8f72?auto=format&fit=crop&q=80&w=400&h=300", specs: "Antiinflamatorio no esteroideo para dolores musculares, articulares e inflamación general. Presentación: caja con 30 cápsulas.", featured: false },
+  { id: 3, name: "Aspirina 100mg", category: "analgesia", price: 8.90, stock: 200, image: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?auto=format&fit=crop&q=80&w=400&h=300", specs: "Ácido acetilsalicílico en dosis baja para prevención cardiovascular y alivio del dolor. Caja con 28 tabletas.", featured: false },
+  { id: 4, name: "Loratadina 10mg", category: "respiratorio", price: 18.20, stock: 80, image: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&q=80&w=400&h=300", specs: "Antihistamínico de segunda generación para el alivio de alergias estacionales, rinitis y urticaria.", featured: true },
+  { id: 5, name: "Jarabe para Tos Adulto", category: "respiratorio", price: 45.00, stock: 60, image: "https://images.unsplash.com/photo-1631549916768-4f8c1770fad8?auto=format&fit=crop&q=80&w=400&h=300", specs: "Expectorante mucolítico que facilita la eliminación de flemas y alivia la tos productiva. Frasco de 120ml.", featured: false },
+  { id: 6, name: "Salbutamol Inhalador", category: "respiratorio", price: 85.00, stock: 40, image: "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&q=80&w=400&h=300", specs: "Broncodilatador de acción rápida para el tratamiento del asma y broncoespasmo. Inhalador de 200 dosis.", featured: false },
+  { id: 7, name: "Multivitamínico A-Z", category: "vitaminas", price: 120.00, stock: 50, image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?auto=format&fit=crop&q=80&w=400&h=300", specs: "Suplemento alimenticio completo con 22 vitaminas y minerales esenciales para adultos. Frasco con 60 cápsulas.", featured: true },
+  { id: 8, name: "Vitamina C 1000mg", category: "vitaminas", price: 65.00, stock: 75, image: "https://images.unsplash.com/photo-1577401239170-897942555fb3?auto=format&fit=crop&q=80&w=400&h=300", specs: "Ácido ascórbico en tabletas efervescentes para reforzar el sistema inmunológico. Tubo con 10 tabletas.", featured: false },
+  { id: 9, name: "Omega 3 Fish Oil", category: "vitaminas", price: 180.00, stock: 35, image: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?auto=format&fit=crop&q=80&w=400&h=300", specs: "Ácidos grasos esenciales EPA y DHA para la salud cardiovascular y cerebral. Frasco con 90 cápsulas blandas.", featured: false },
+  { id: 10, name: "Omeprazol 20mg", category: "gastro", price: 32.50, stock: 110, image: "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&q=80&w=400&h=300", specs: "Inhibidor de bomba de protones para el tratamiento de acidez, reflujo y úlceras gástricas. Caja con 14 cápsulas.", featured: true },
+  { id: 11, name: "Ranitidina 150mg", category: "gastro", price: 22.00, stock: 90, image: "https://images.unsplash.com/photo-1550572017-edd951aa8f72?auto=format&fit=crop&q=80&w=400&h=300", specs: "Antiácido para el alivio de la acidez estomacal y prevención de úlceras. Caja con 20 tabletas.", featured: false },
+  { id: 12, name: "Crema Hidratante Facial", category: "dermatologia", price: 95.00, stock: 45, image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&q=80&w=400&h=300", specs: "Crema facial con ácido hialurónico y vitamina E para hidratación profunda. Tubo de 50g.", featured: true },
+  { id: 13, name: "Protector Solar SPF50", category: "dermatologia", price: 145.00, stock: 55, image: "https://images.unsplash.com/photo-1532947974358-a218d68048f5?auto=format&fit=crop&q=80&w=400&h=300", specs: "Protección solar de amplio espectro UVA/UVB resistente al agua. Tubo de 60ml.", featured: false },
+  { id: 14, name: "Metformina 850mg", category: "diabetes", price: 28.00, stock: 150, image: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400&h=300", specs: "Antidiabético oral de primera línea para el control de la glucosa en diabetes tipo 2. Caja con 30 tabletas.", featured: false },
+  { id: 15, name: "Tiras Reactivas Glucosa", category: "diabetes", price: 220.00, stock: 30, image: "https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&q=80&w=400&h=300", specs: "Tiras para medición de glucosa en sangre compatibles con glucómetros universales. Caja con 50 tiras.", featured: true },
+  { id: 16, name: "Gotas Oftálmicas Lubricantes", category: "oftalmologia", price: 55.00, stock: 70, image: "https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&q=80&w=400&h=300", specs: "Lágrimas artificiales con ácido hialurónico para alivio de ojos secos e irritados. Frasco de 15ml.", featured: false },
+  { id: 17, name: "Colirio Antiinflamatorio", category: "oftalmologia", price: 72.00, stock: 40, image: "https://images.unsplash.com/photo-1631549916768-4f8c1770fad8?auto=format&fit=crop&q=80&w=400&h=300", specs: "Gotas oculares con acción antiinflamatoria y antibacteriana. Frasco de 10ml.", featured: false },
+  { id: 18, name: "Jarabe Infantil para Fiebre", category: "infantil", price: 38.00, stock: 85, image: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?auto=format&fit=crop&q=80&w=400&h=300", specs: "Suspensión oral de ibuprofeno para niños con sabor a fresa. Frasco de 120ml con dosificador.", featured: true },
+  { id: 19, name: "Vitaminas Infantiles Gomitas", category: "infantil", price: 98.00, stock: 60, image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?auto=format&fit=crop&q=80&w=400&h=300", specs: "Gomitas masticables con vitaminas A, C, D y zinc para niños mayores de 3 años. Frasco con 60 gomitas.", featured: false },
+  { id: 20, name: "Pasta Dental Premium", category: "cuidado-personal", price: 42.00, stock: 100, image: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?auto=format&fit=crop&q=80&w=400&h=300", specs: "Pasta dental con flúor y blanqueador óptico para una sonrisa más brillante. Tubo de 100ml.", featured: false },
+  { id: 21, name: "Shampoo Anticaída", category: "cuidado-personal", price: 135.00, stock: 40, image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&q=80&w=400&h=300", specs: "Shampoo con biotina y queratina para fortalecer el cabello y prevenir la caída. Frasco de 400ml.", featured: false },
+  { id: 22, name: "Preservativos Premium x12", category: "salud-sexual", price: 68.00, stock: 120, image: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400&h=300", specs: "Preservativos de látex ultrafinos con lubricante para mayor sensibilidad. Caja con 12 unidades.", featured: false },
+  { id: 23, name: "Test de Embarazo Digital", category: "salud-sexual", price: 89.00, stock: 50, image: "https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&q=80&w=400&h=300", specs: "Prueba de embarazo digital de alta precisión con resultado en 3 minutos. Indicador de semanas.", featured: false },
+];
+
+export const initialBranches = [
+  {
+    id: 1,
+    name: "Sucursal Centro",
+    address: "Av. Revolución #456, Col. Centro, Ciudad del Desierto",
+    phone: "(614) 555-0101",
+    hours: "Lunes a Domingo: 7:00 AM - 11:00 PM",
+    image: "https://images.unsplash.com/photo-1607619056574-7b8d304d3b24?auto=format&fit=crop&q=80&w=400&h=300",
+  },
+  {
+    id: 2,
+    name: "Sucursal Norte",
+    address: "Blvd. Ortiz Mena #1230, Col. Las Palmas, Ciudad del Desierto",
+    phone: "(614) 555-0202",
+    hours: "Lunes a Domingo: 24 Horas",
+    image: "https://images.unsplash.com/photo-1576602976047-174e57a47881?auto=format&fit=crop&q=80&w=400&h=300",
+  },
+  {
+    id: 3,
+    name: "Sucursal Plaza del Sol",
+    address: "Centro Comercial Plaza del Sol, Local 15, Col. San Felipe",
+    phone: "(614) 555-0303",
+    hours: "Lunes a Sábado: 9:00 AM - 9:00 PM | Domingo: 10:00 AM - 6:00 PM",
+    image: "https://images.unsplash.com/photo-1628771065518-0d82f1938462?auto=format&fit=crop&q=80&w=400&h=300",
+  },
+  {
+    id: 4,
+    name: "Sucursal Sur",
+    address: "Av. de las Industrias #890, Parque Industrial, Ciudad del Desierto",
+    phone: "(614) 555-0404",
+    hours: "Lunes a Viernes: 8:00 AM - 10:00 PM | Sábado y Domingo: 9:00 AM - 8:00 PM",
+    image: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400&h=300",
+  },
+];
+
+export const initialBanners = [
+  {
+    id: 1,
+    title: "Cuida tu salud y la de tu familia",
+    subtitle: "Hasta 40% de descuento en vitaminas y suplementos seleccionados este mes.",
+    image: "https://images.unsplash.com/photo-1576602976047-174e57a47881?auto=format&fit=crop&q=80&w=1200",
+    ctaText: "Ver Ofertas",
+    ctaLink: "/products",
+    active: true,
+  },
+  {
+    id: 2,
+    title: "Envío gratis en tu primera compra",
+    subtitle: "Regístrate hoy y recibe tu pedido sin costo de envío a cualquier dirección.",
+    image: "https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&q=80&w=1200",
+    ctaText: "Crear Cuenta",
+    ctaLink: "/register",
+    active: true,
+  },
+  {
+    id: 3,
+    title: "Farmacia El Desierto cerca de ti",
+    subtitle: "4 sucursales con atención especializada y precios accesibles.",
+    image: "https://images.unsplash.com/photo-1631549916768-4f8c1770fad8?auto=format&fit=crop&q=80&w=1200",
+    ctaText: "Ver Sucursales",
+    ctaLink: "/branches",
+    active: true,
+  },
+];
