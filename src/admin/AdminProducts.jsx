@@ -70,6 +70,22 @@ export default function AdminProducts() {
     setForm(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        showNotif("Error: Solo se permiten archivos de imagen.");
+        e.target.value = ""; // Reset input
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(prev => ({ ...prev, image: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-page-header">
@@ -156,9 +172,19 @@ export default function AdminProducts() {
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">URL de Imagen</label>
+                <label className="form-label">Cargar Imagen desde el Dispositivo</label>
+                <input type="file" accept="image/*" onChange={handleFileChange} className="form-input" style={{ color: '#94a3b8' }} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">O escribir URL de Imagen</label>
                 <input type="url" name="image" value={form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
               </div>
+              {form.image && (
+                <div className="form-group">
+                  <span className="form-label">Vista Previa de Imagen:</span>
+                  <img src={form.image} alt="Preview" style={{ width: '100%', maxHeight: '140px', objectFit: 'contain', borderRadius: '12px', marginTop: '6px', backgroundColor: '#0b0f19', border: '1px solid #1e293b', padding: '8px' }} />
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">Descripción</label>
                 <textarea name="specs" value={form.specs} onChange={handleChange} className="form-textarea" rows="3" />

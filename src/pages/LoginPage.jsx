@@ -99,10 +99,6 @@ export default function LoginPage() {
           Crear Cuenta
         </Link>
 
-        <div className="auth-hint">
-          <p><strong>Admin:</strong> admin@farmacia.com / admin123</p>
-          <p><strong>Cliente:</strong> Regístrate con cualquier correo</p>
-        </div>
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "", email: "", password: "", confirmPassword: "",
-    phone: "", address: "", cardNumber: "",
+    phone: "", address: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,6 @@ export default function RegisterPage() {
         password: form.password,
         phone: form.phone,
         address: form.address,
-        cardNumber: form.cardNumber,
       });
       setLoading(false);
       if (result.success) {
@@ -95,15 +94,9 @@ export default function RegisterPage() {
             <span>Datos opcionales (puedes agregarlos después)</span>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Teléfono</label>
-              <input type="tel" name="phone" value={form.phone} onChange={handleChange} className="form-input" placeholder="(614) 555-1234" id="register-phone" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Número de Tarjeta</label>
-              <input type="text" name="cardNumber" value={form.cardNumber} onChange={handleChange} className="form-input" placeholder="•••• •••• •••• ••••" id="register-card" />
-            </div>
+          <div className="form-group">
+            <label className="form-label">Teléfono</label>
+            <input type="tel" name="phone" value={form.phone} onChange={handleChange} className="form-input" placeholder="(614) 555-1234" id="register-phone" />
           </div>
 
           <div className="form-group">

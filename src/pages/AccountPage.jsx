@@ -61,10 +61,6 @@ export default function AccountPage() {
                 <label className="form-label">Dirección</label>
                 <input type="text" name="address" value={form.address || ""} onChange={handleChange} className="form-input" />
               </div>
-              <div className="form-group">
-                <label className="form-label">Tarjeta</label>
-                <input type="text" name="cardNumber" value={form.cardNumber || ""} onChange={handleChange} className="form-input" placeholder="•••• •••• •••• ••••" />
-              </div>
               <button type="submit" className="btn-primary-lg btn-full" id="save-profile">Guardar Cambios</button>
             </form>
           ) : (
@@ -84,10 +80,6 @@ export default function AccountPage() {
               <div className="account-info-row">
                 <span className="account-info-label">Dirección:</span>
                 <span>{user.address || "No registrada"}</span>
-              </div>
-              <div className="account-info-row">
-                <span className="account-info-label">Tarjeta:</span>
-                <span>{user.cardNumber ? `•••• •••• •••• ${user.cardNumber.slice(-4)}` : "No registrada"}</span>
               </div>
             </div>
           )}
