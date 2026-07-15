@@ -2,47 +2,57 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import Breadcrumbs from "../components/Breadcrumbs";
+import logoFarmaGen from "../assets/logo.jpg";
 
 export default function LoginPage() {
-  const { login } = useApp();
+  const { loginUser, resendVerificationEmail } = useApp();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [pendingVerification, setPendingVerification] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
+    setPendingVerification(false);
     setLoading(true);
 
-    // Simular delay de red
-    setTimeout(() => {
-      const result = login(email, password);
-      setLoading(false);
-      if (result.success) {
-        if (result.role === "admin") {
-          navigate("/admin");
-        } else {
-          navigate("/");
-        }
-      } else {
-        setError(result.message);
-      }
-    }, 800);
+    const result = await loginUser(email, password);
+    setLoading(false);
+    if (result.success) {
+      navigate("/");
+    } else {
+      setError(result.message);
+      setPendingVerification(Boolean(result.requiresEmailVerification));
+    }
   };
 
+  const handleResendVerification = async () => {
+    setError("");
+    setSuccess("");
+    setResending(true);
+    const result = await resendVerificationEmail(email, password);
+    setResending(false);
+    if (result.success) {
+      setSuccess(result.message);
+    } else {
+      setError(result.message);
+    }
+  };
   return (
     <div className="page-container">
       <Breadcrumbs />
 
       <div className="auth-card">
         <div className="auth-card-header">
-          <svg className="auth-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1 11h-4v4h-4v-4H6v-4h4V6h4v4h4v4z" />
-          </svg>
+          <img src={logoFarmaGen} alt="Farmacia FarmaGen" className="auth-logo-img" />
           <h1 className="auth-title">Bienvenido</h1>
-          <p className="auth-subtitle">Inicia sesión en Farmacia El Desierto</p>
+          <p className="auth-subtitle">Inicia sesión en Farmacia FarmaGen</p>
         </div>
 
         {error && (
@@ -54,12 +64,19 @@ export default function LoginPage() {
           </div>
         )}
 
+        {success && (
+          <div className="notification notification--success" role="status">
+            {success}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label className="form-label">Correo Electrónico</label>
             <input
               type="email"
               required
+              maxLength={100}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="form-input"
@@ -73,6 +90,7 @@ export default function LoginPage() {
             <input
               type="password"
               required
+              maxLength={100}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="form-input"
@@ -84,11 +102,22 @@ export default function LoginPage() {
           <button
             type="submit"
             className={`btn-primary-lg btn-full ${loading ? "btn-loading" : ""}`}
-            disabled={loading}
+            disabled={loading || resending}
             id="login-submit"
           >
             {loading ? "Verificando..." : "Ingresar"}
           </button>
+
+          {pendingVerification && (
+            <button
+              type="button"
+              className="btn-outline-lg btn-full"
+              onClick={handleResendVerification}
+              disabled={loading || resending}
+            >
+              {resending ? "Reenviando correo..." : "Reenviar correo de verificacion"}
+            </button>
+          )}
         </form>
 
         <div className="auth-divider">

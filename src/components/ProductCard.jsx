@@ -1,14 +1,19 @@
 import { Link } from "react-router-dom";
+import { Plus, ShieldCheck, Star } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { CATEGORIES } from "../data/initialData";
 
 export default function ProductCard({ product }) {
   const { addToCart } = useApp();
   const categoryInfo = CATEGORIES.find(c => c.id === product.category);
+  const isOutOfStock = Number(product.stock) <= 0;
+  const imageSrc = product.image || product.imagenUrl || product.imageUrl || "";
+  const price = Number(product.price || product.precio || 0);
 
   const handleAdd = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isOutOfStock) return;
     addToCart(product);
   };
 
@@ -16,12 +21,15 @@ export default function ProductCard({ product }) {
     <div className="product-card" id={`product-${product.id}`}>
       <Link to={`/products/${product.id}`} className="product-card-link">
         <div className="product-card-img-wrap">
-          <img src={product.image} alt={product.name} className="product-card-img" loading="lazy" />
+          <img src={imageSrc} alt={product.name} className="product-card-img" loading="lazy" />
           <span className="product-card-category">
+            <ShieldCheck size={14} aria-hidden="true" />
             {categoryInfo?.label || product.category}
           </span>
+          {isOutOfStock && <span className="product-card-featured product-card-stock-badge">Agotado</span>}
           {product.featured && (
             <span className="product-card-featured">
+              <Star size={13} aria-hidden="true" />
               Destacado
             </span>
           )}
@@ -33,12 +41,10 @@ export default function ProductCard({ product }) {
         </Link>
         <p className="product-card-specs">{product.specs?.substring(0, 70)}...</p>
         <div className="product-card-footer">
-          <span className="product-card-price">${product.price.toFixed(2)}</span>
-          <button onClick={handleAdd} className="product-card-add-btn" id={`add-to-cart-${product.id}`}>
-            <svg className="product-card-add-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Añadir
+          <span className="product-card-price">${price.toFixed(2)}</span>
+          <button onClick={handleAdd} className="product-card-add-btn" id={`add-to-cart-${product.id}`} disabled={isOutOfStock}>
+            <Plus className="product-card-add-icon" aria-hidden="true" />
+            {isOutOfStock ? "Agotado" : "Anadir"}
           </button>
         </div>
       </div>

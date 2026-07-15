@@ -36,6 +36,14 @@ export default function AdminBranches() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!form.name.trim() || !form.address.trim() || !form.phone.trim() || !form.hours.trim()) {
+      showNotif("Falta completar campos obligatorios");
+      return;
+    }
+    if (form.name.length > 50 || form.address.length > 100 || form.phone.length > 100 || form.hours.length > 100) {
+      showNotif(form.name.length > 50 ? "El nombre no puede superar 50 caracteres" : "Este campo no puede superar 100 caracteres");
+      return;
+    }
     if (editingBranch) {
       updateBranch(editingBranch.id, form);
       showNotif(`"${form.name}" actualizada correctamente.`);
@@ -47,7 +55,13 @@ export default function AdminBranches() {
   };
 
   const handleChange = (e) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    const limit = name === "name" ? 50 : 100;
+    if (value.length > limit) {
+      showNotif(name === "name" ? "El nombre no puede superar 50 caracteres" : "Este campo no puede superar 100 caracteres");
+      return;
+    }
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
@@ -114,20 +128,20 @@ export default function AdminBranches() {
             <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-group">
                 <label className="form-label">Nombre de la Sucursal *</label>
-                <input type="text" name="name" required value={form.name} onChange={handleChange} className="form-input" />
+                <input type="text" name="name" required maxLength={50} value={form.name} onChange={handleChange} className="form-input" />
               </div>
               <div className="form-group">
                 <label className="form-label">Dirección *</label>
-                <input type="text" name="address" required value={form.address} onChange={handleChange} className="form-input" />
+                <input type="text" name="address" required maxLength={100} value={form.address} onChange={handleChange} className="form-input" />
               </div>
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Teléfono *</label>
-                  <input type="tel" name="phone" required value={form.phone} onChange={handleChange} className="form-input" />
+                  <input type="tel" name="phone" required maxLength={100} pattern="[0-9\s()+]*" value={form.phone} onChange={handleChange} className="form-input" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Horario *</label>
-                  <input type="text" name="hours" required value={form.hours} onChange={handleChange} className="form-input" placeholder="Ej: Lunes a Domingo: 24 Horas" />
+                  <input type="text" name="hours" required maxLength={100} value={form.hours} onChange={handleChange} className="form-input" placeholder="Ej: Lunes a sábado: 8 a.m. – 10 p.m. | Domingo: 9 a.m. – 9 p.m." />
                 </div>
               </div>
               
@@ -138,7 +152,7 @@ export default function AdminBranches() {
 
               <div className="form-group">
                 <label className="form-label">O escribir URL de Imagen</label>
-                <input type="url" name="image" value={form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
+                <input type="url" name="image" maxLength={100} value={form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
               </div>
 
               {form.image && (

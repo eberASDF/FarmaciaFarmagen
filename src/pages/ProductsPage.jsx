@@ -1,12 +1,40 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import {
+  Baby,
+  Bandage,
+  Droplets,
+  Eye,
+  HeartPulse,
+  Pill,
+  Search,
+  Shield,
+  Sparkles,
+  Star,
+  Stethoscope,
+  Syringe,
+  X,
+} from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { CATEGORIES } from "../data/initialData";
 import ProductCard from "../components/ProductCard";
 import Breadcrumbs from "../components/Breadcrumbs";
 
+const categoryIcons = {
+  analgesia: Pill,
+  respiratorio: Stethoscope,
+  vitaminas: Sparkles,
+  gastro: Droplets,
+  dermatologia: Shield,
+  diabetes: Syringe,
+  oftalmologia: Eye,
+  infantil: Baby,
+  "cuidado-personal": HeartPulse,
+  "salud-sexual": Bandage,
+};
+
 export default function ProductsPage() {
-  const { products } = useApp();
+  const { products, productsLoading, productsError } = useApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
 
@@ -44,8 +72,8 @@ export default function ProductsPage() {
   });
 
   const activeCatLabel = CATEGORIES.find(c => c.id === activeCategory)?.label;
-  const breadcrumbExtra = activeCatLabel 
-    ? (activeFeatured ? `${activeCatLabel} (Destacados)` : activeCatLabel) 
+  const breadcrumbExtra = activeCatLabel
+    ? (activeFeatured ? `${activeCatLabel} destacados` : activeCatLabel)
     : (activeFeatured ? "Destacados" : null);
 
   return (
@@ -53,86 +81,91 @@ export default function ProductsPage() {
       <Breadcrumbs extra={breadcrumbExtra} />
 
       <div className="products-layout">
-        {/* Sidebar */}
         <aside className="products-sidebar">
-          {/* Search */}
           <div className="sidebar-section">
-            <h3 className="sidebar-title">Buscar</h3>
-            <div className="sidebar-search-wrap">
-              <svg className="sidebar-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+            <h3 className="sidebar-title">Categorias</h3>
+            <div className="sidebar-filters">
+              <button
+                onClick={clearFilters}
+                className={`sidebar-filter-btn ${!activeCategory && !activeFeatured ? "sidebar-filter-btn--active" : ""}`}
+              >
+                <Sparkles className="sidebar-filter-icon" aria-hidden="true" />
+                <span>Todas las categorias</span>
+              </button>
+              {CATEGORIES.map(cat => {
+                const Icon = categoryIcons[cat.id] || Pill;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setCategory(cat.id)}
+                    className={`sidebar-filter-btn ${activeCategory === cat.id ? "sidebar-filter-btn--active" : ""}`}
+                    id={`filter-${cat.id}`}
+                  >
+                    <Icon className="sidebar-filter-icon" aria-hidden="true" />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+
+        <section className="products-grid-section">
+          <div className="products-toolbar">
+            <div className="products-search-wrap">
+              <Search className="products-search-icon" aria-hidden="true" />
               <input
                 type="text"
+                maxLength={100}
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Nombre del medicamento..."
-                className="sidebar-search-input"
+                onChange={(e) => setSearch(e.target.value.slice(0, 100))}
+                placeholder="Buscar productos o marcas..."
+                className="products-search-input"
                 id="product-search"
               />
             </div>
-          </div>
-
-          {/* Featured Filter */}
-          <div className="sidebar-section">
-            <h3 className="sidebar-title">Destacados</h3>
             <button
               onClick={toggleFeatured}
-              className={`sidebar-filter-btn ${activeFeatured ? "sidebar-filter-btn--active" : ""}`}
+              className={`products-featured-btn ${activeFeatured ? "products-featured-btn--active" : ""}`}
               id="filter-featured"
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
             >
-              <span>Ver solo destacados</span>
-              <span className="featured-status-pill" style={{
-                fontSize: '0.75rem',
-                padding: '2px 8px',
-                borderRadius: '12px',
-                backgroundColor: activeFeatured ? 'var(--primary-dark)' : 'var(--border-color)',
-                color: activeFeatured ? '#ffffff' : 'var(--text-muted)'
-              }}>
-                {activeFeatured ? "Activo" : "Inactivo"}
-              </span>
+              <Star size={18} aria-hidden="true" />
+              Destacados
             </button>
-          </div>
-
-          {/* Category Filters */}
-          <div className="sidebar-section">
-            <h3 className="sidebar-title">Filtrar por Salud</h3>
-            <div className="sidebar-filters">
-              {CATEGORIES.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setCategory(cat.id)}
-                  className={`sidebar-filter-btn ${activeCategory === cat.id ? "sidebar-filter-btn--active" : ""}`}
-                  id={`filter-${cat.id}`}
-                >
-                  {cat.icon && <span>{cat.icon}</span>}
-                  <span>{cat.label}</span>
-                </button>
-              ))}
-            </div>
             {(activeCategory || search || activeFeatured) && (
-              <button onClick={clearFilters} className="sidebar-clear-btn">
-                ✕ Limpiar Filtros
+              <button onClick={clearFilters} className="products-clear-btn">
+                <X size={17} aria-hidden="true" />
+                Limpiar
               </button>
             )}
           </div>
 
-        </aside>
-
-        {/* Product Grid */}
-        <section className="products-grid-section">
           <div className="products-grid-header">
-            <h1 className="products-grid-title">
-              {activeCatLabel ? `Medicamentos: ${activeCatLabel}` : "Todos los Medicamentos"}
-            </h1>
-            <span className="products-grid-count">{filtered.length} productos</span>
+            <div>
+              <p className="products-kicker">Catalogo</p>
+              <h1 className="products-grid-title">
+                {activeCatLabel ? activeCatLabel : "Productos"}
+              </h1>
+            </div>
+            <span className="products-grid-count">{productsLoading ? "Cargando..." : `${filtered.length} productos`}</span>
           </div>
 
-          {filtered.length === 0 ? (
+          {productsLoading ? (
+            <div className="products-empty">
+              <p>Cargando productos...</p>
+            </div>
+          ) : productsError ? (
+            <div className="products-empty">
+              <p>{productsError}</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="products-empty">
+              <p>No hay productos disponibles por el momento.</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="products-empty">
               <p>No se encontraron productos con estos filtros.</p>
-              <button onClick={clearFilters} className="products-empty-btn">Limpiar Filtros</button>
+              <button onClick={clearFilters} className="products-empty-btn">Limpiar filtros</button>
             </div>
           ) : (
             <div className="products-grid">

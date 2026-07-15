@@ -1,4 +1,4 @@
-// ─── Datos Iniciales de Farmacia El Desierto ────────────────────────────────
+// ─── Datos Iniciales de Farmacia FarmaGen ───────────────────────────────────
 
 export const CATEGORIES = [
   { id: 'analgesia', label: 'Analgesia', icon: '' },
@@ -43,33 +43,33 @@ export const initialBranches = [
   {
     id: 1,
     name: "Sucursal Centro",
-    address: "Av. Revolución #456, Col. Centro, Ciudad del Desierto",
-    phone: "(614) 555-0101",
-    hours: "Lunes a Domingo: 7:00 AM - 11:00 PM",
+    address: "Av. Revolución #456, Col. Centro, San Luis Río Colorado, Sonora",
+    phone: "653 534 6587",
+    hours: "Lunes a sábado: 8 a.m. – 10 p.m. | Domingo: 9 a.m. – 9 p.m.",
     image: "https://images.unsplash.com/photo-1607619056574-7b8d304d3b24?auto=format&fit=crop&q=80&w=400&h=300",
   },
   {
     id: 2,
     name: "Sucursal Norte",
-    address: "Blvd. Ortiz Mena #1230, Col. Las Palmas, Ciudad del Desierto",
-    phone: "(614) 555-0202",
-    hours: "Lunes a Domingo: 24 Horas",
+    address: "Blvd. Ortiz Mena #1230, Col. Las Palmas, San Luis Río Colorado, Sonora",
+    phone: "653 534 6587",
+    hours: "Lunes a sábado: 8 a.m. – 10 p.m. | Domingo: 9 a.m. – 9 p.m.",
     image: "https://images.unsplash.com/photo-1576602976047-174e57a47881?auto=format&fit=crop&q=80&w=400&h=300",
   },
   {
     id: 3,
     name: "Sucursal Plaza del Sol",
     address: "Centro Comercial Plaza del Sol, Local 15, Col. San Felipe",
-    phone: "(614) 555-0303",
-    hours: "Lunes a Sábado: 9:00 AM - 9:00 PM | Domingo: 10:00 AM - 6:00 PM",
+    phone: "653 534 6587",
+    hours: "Lunes a sábado: 8 a.m. – 10 p.m. | Domingo: 9 a.m. – 9 p.m.",
     image: "https://images.unsplash.com/photo-1628771065518-0d82f1938462?auto=format&fit=crop&q=80&w=400&h=300",
   },
   {
     id: 4,
     name: "Sucursal Sur",
-    address: "Av. de las Industrias #890, Parque Industrial, Ciudad del Desierto",
-    phone: "(614) 555-0404",
-    hours: "Lunes a Viernes: 8:00 AM - 10:00 PM | Sábado y Domingo: 9:00 AM - 8:00 PM",
+    address: "Av. de las Industrias #890, Parque Industrial, San Luis Río Colorado, Sonora",
+    phone: "653 534 6587",
+    hours: "Lunes a sábado: 8 a.m. – 10 p.m. | Domingo: 9 a.m. – 9 p.m.",
     image: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400&h=300",
   },
 ];
@@ -95,7 +95,7 @@ export const initialBanners = [
   },
   {
     id: 3,
-    title: "Farmacia El Desierto cerca de ti",
+    title: "Farmacia FarmaGen cerca de ti",
     subtitle: "4 sucursales con atención especializada y precios accesibles.",
     image: "https://images.unsplash.com/photo-1631549916768-4f8c1770fad8?auto=format&fit=crop&q=80&w=1200",
     ctaText: "Ver Sucursales",

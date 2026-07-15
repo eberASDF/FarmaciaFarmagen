@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirigiendo...</title>
+    <script>
+      // Fallback para GitHub Pages y otros hosts que usan 404.html en rutas SPA.
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      const baseFolder = pathParts[0] || "eber_higuera";
+      const appRoute = `/${pathParts.slice(1).join("/")}`;
+      window.location.replace(`/${baseFolder}/?route=${encodeURIComponent(appRoute)}`);
+    </script>
+  </head>
+  <body></body>
+</html>

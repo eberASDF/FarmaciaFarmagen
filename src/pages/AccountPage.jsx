@@ -1,29 +1,74 @@
-import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Navigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import Breadcrumbs from "../components/Breadcrumbs";
+import { downloadPickupTicket } from "../utils/orderTicket";
 
 export default function AccountPage() {
-  const { user, updateProfile, orders } = useApp();
+  const { user, loadUserProfile, updateProfile, orders, branches } = useApp();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ ...user });
-  const [saved, setSaved] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
-  if (!user) return <Navigate to="/login" />;
+  useEffect(() => {
+    let active = true;
+
+    const loadProfile = async () => {
+      if (!user?.uid) return;
+      setLoadingProfile(true);
+      const result = await loadUserProfile(user.uid);
+      if (!active) return;
+      if (!result.success) {
+        setMessageType("error");
+        setMessage(result.message || "Error al cargar perfil");
+      }
+      setLoadingProfile(false);
+    };
+
+    loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    setForm({ ...(user || {}) });
+  }, [user]);
+
+  if (!user || !user.emailVerified) return <Navigate to="/login" />;
+
+  const statusLabels = {
+    pendiente: "Pendiente",
+    entregado: "Entregado",
+    archivado: "Archivado",
+  };
 
   const handleChange = (e) => {
+    const limit = e.target.name === "name" ? 50 : 100;
+    if (e.target.value.length > limit) return;
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    updateProfile(form);
-    setEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    if ((form.name || "").length > 50 || (form.phone || "").length > 100 || (form.address || "").length > 100) return;
+    setSavingProfile(true);
+    const result = await updateProfile(form);
+    setSavingProfile(false);
+    setMessageType(result.success ? "success" : "error");
+    setMessage(result.message);
+    if (result.success) setEditing(false);
+    setTimeout(() => setMessage(""), 3000);
   };
 
-  const userOrders = orders.filter(o => o.user === user.email);
+  const userOrders = orders.filter(o => o.usuarioId === user.uid && !o.archivado && o.status !== "archivado");
+  const handleDownloadTicket = (order) => {
+    downloadPickupTicket(order, branches);
+  };
 
   return (
     <div className="page-container">
@@ -31,18 +76,17 @@ export default function AccountPage() {
 
       <h1 className="page-title">Mi Cuenta</h1>
 
-      {saved && (
-        <div className="notification notification--success">
-          ✓ Datos actualizados correctamente
+      {message && (
+        <div className={`notification ${messageType === "success" ? "notification--success" : ""}`} role="status">
+          {message}
         </div>
       )}
 
       <div className="account-grid">
-        {/* Profile Card */}
         <div className="account-card">
           <div className="account-card-header">
             <h2 className="account-card-title">Datos Personales</h2>
-            <button onClick={() => setEditing(!editing)} className="account-edit-btn">
+            <button onClick={() => setEditing(!editing)} className="account-edit-btn" disabled={loadingProfile || savingProfile}>
               {editing ? "Cancelar" : "Editar"}
             </button>
           </div>
@@ -51,61 +95,74 @@ export default function AccountPage() {
             <form onSubmit={handleSave} className="auth-form">
               <div className="form-group">
                 <label className="form-label">Nombre</label>
-                <input type="text" name="name" value={form.name || ""} onChange={handleChange} className="form-input" />
+                <input type="text" name="name" maxLength={50} value={form.name || ""} onChange={handleChange} className="form-input" />
               </div>
               <div className="form-group">
-                <label className="form-label">Teléfono</label>
-                <input type="tel" name="phone" value={form.phone || ""} onChange={handleChange} className="form-input" />
+                <label className="form-label">Telefono</label>
+                <input type="tel" name="phone" maxLength={100} pattern="[0-9\s()+]*" value={form.phone || ""} onChange={handleChange} className="form-input" />
               </div>
               <div className="form-group">
-                <label className="form-label">Dirección</label>
-                <input type="text" name="address" value={form.address || ""} onChange={handleChange} className="form-input" />
+                <label className="form-label">Direccion</label>
+                <input type="text" name="address" maxLength={100} value={form.address || ""} onChange={handleChange} className="form-input" />
               </div>
-              <button type="submit" className="btn-primary-lg btn-full" id="save-profile">Guardar Cambios</button>
+              <button type="submit" className="btn-primary-lg btn-full" id="save-profile" disabled={savingProfile}>
+                {savingProfile ? "Guardando..." : "Guardar Cambios"}
+              </button>
             </form>
           ) : (
             <div className="account-info">
               <div className="account-info-row">
                 <span className="account-info-label">Nombre:</span>
-                <span>{user.name || "—"}</span>
+                <span>{user.name || "-"}</span>
               </div>
               <div className="account-info-row">
                 <span className="account-info-label">Email:</span>
                 <span>{user.email}</span>
               </div>
               <div className="account-info-row">
-                <span className="account-info-label">Teléfono:</span>
+                <span className="account-info-label">Telefono:</span>
                 <span>{user.phone || "No registrado"}</span>
               </div>
               <div className="account-info-row">
-                <span className="account-info-label">Dirección:</span>
+                <span className="account-info-label">Direccion:</span>
                 <span>{user.address || "No registrada"}</span>
               </div>
+              {user.role === "admin" && (
+                <Link to="/admin" className="account-admin-link">
+                  Ir al dashboard
+                </Link>
+              )}
             </div>
           )}
         </div>
 
-        {/* Orders */}
         <div className="account-card">
           <h2 className="account-card-title">Historial de Pedidos</h2>
           {userOrders.length === 0 ? (
-            <p className="account-empty">Aún no tienes pedidos realizados.</p>
+            <p className="account-empty">Aun no tienes pedidos realizados.</p>
           ) : (
             <div className="orders-list">
               {userOrders.map(order => (
                 <div key={order.id} className="order-item">
                   <div className="order-item-header">
                     <span className="order-item-id">Pedido #{order.id}</span>
-                    <span className="order-item-status">{order.status}</span>
+                    <span className="order-item-status">{statusLabels[order.status] || order.status}</span>
                   </div>
                   <div className="order-item-details">
                     <span>{order.date}</span>
                     <span>{order.items.length} producto(s)</span>
                     <span className="order-item-total">${order.total.toFixed(2)}</span>
                   </div>
-                  <div className="order-item-delivery">
-                    {order.deliveryMethod === "domicilio" ? "Envío a domicilio" : "Recoger en sucursal"}
-                  </div>
+                  <div className="order-item-delivery">Recoger en sucursal</div>
+                  {order.status !== "entregado" && (
+                    <button
+                      type="button"
+                      className="order-ticket-btn"
+                      onClick={() => handleDownloadTicket(order)}
+                    >
+                      Descargar Ticket para Sucursal
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

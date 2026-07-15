@@ -35,6 +35,14 @@ export default function AdminCarousel() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!form.title.trim()) {
+      showNotif("Falta completar campos obligatorios");
+      return;
+    }
+    if (form.title.length > 50 || form.subtitle.length > 300 || form.ctaText.length > 100) {
+      showNotif(form.title.length > 50 ? "El nombre no puede superar 50 caracteres" : form.subtitle.length > 300 ? "La descripciÃ³n no puede superar 300 caracteres" : "Este campo no puede superar 100 caracteres");
+      return;
+    }
     if (editingBanner) {
       updateBanner(editingBanner.id, form);
       showNotif("Banner actualizado correctamente.");
@@ -46,7 +54,13 @@ export default function AdminCarousel() {
   };
 
   const handleChange = (e) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    const limit = name === "title" ? 50 : name === "subtitle" ? 300 : 100;
+    if (value.length > limit) {
+      showNotif(name === "title" ? "El nombre no puede superar 50 caracteres" : name === "subtitle" ? "La descripciÃ³n no puede superar 300 caracteres" : "Este campo no puede superar 100 caracteres");
+      return;
+    }
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
@@ -128,11 +142,11 @@ export default function AdminCarousel() {
             <form onSubmit={handleSubmit} className="modal-form">
               <div className="form-group">
                 <label className="form-label">Título *</label>
-                <input type="text" name="title" required value={form.title} onChange={handleChange} className="form-input" />
+                <input type="text" name="title" required maxLength={50} value={form.title} onChange={handleChange} className="form-input" />
               </div>
               <div className="form-group">
                 <label className="form-label">Subtítulo</label>
-                <textarea name="subtitle" value={form.subtitle} onChange={handleChange} className="form-textarea" rows="2" />
+                <textarea name="subtitle" value={form.subtitle} onChange={handleChange} className="form-textarea" rows="2" maxLength={300} />
               </div>
               
               <div className="form-group">
@@ -142,7 +156,7 @@ export default function AdminCarousel() {
 
               <div className="form-group">
                 <label className="form-label">O escribir URL de Imagen</label>
-                <input type="url" name="image" value={form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
+                <input type="url" name="image" maxLength={100} value={form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
               </div>
 
               {form.image && (
@@ -155,7 +169,7 @@ export default function AdminCarousel() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Texto del Botón (CTA)</label>
-                  <input type="text" name="ctaText" value={form.ctaText} onChange={handleChange} className="form-input" placeholder="Ej: Ver Ofertas" />
+                  <input type="text" name="ctaText" maxLength={100} value={form.ctaText} onChange={handleChange} className="form-input" placeholder="Ej: Ver Ofertas" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Link del Botón</label>
