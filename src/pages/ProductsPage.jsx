@@ -64,6 +64,16 @@ export default function ProductsPage() {
     setSearchParams({});
   };
 
+  const handleMobileCategoryChange = (event) => {
+    const nextCategory = event.target.value;
+    if (!nextCategory) {
+      searchParams.delete("cat");
+    } else {
+      searchParams.set("cat", nextCategory);
+    }
+    setSearchParams(searchParams);
+  };
+
   const filtered = products.filter(p => {
     const matchCat = !activeCategory || p.category === activeCategory;
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
@@ -111,6 +121,20 @@ export default function ProductsPage() {
         </aside>
 
         <section className="products-grid-section">
+          <div className="products-mobile-category">
+            <label htmlFor="mobile-category-select">Categoria:</label>
+            <select
+              id="mobile-category-select"
+              value={activeCategory || ""}
+              onChange={handleMobileCategoryChange}
+            >
+              <option value="">Todas las categorias</option>
+              {CATEGORIES.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.label}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="products-toolbar">
             <div className="products-search-wrap">
               <Search className="products-search-icon" aria-hidden="true" />

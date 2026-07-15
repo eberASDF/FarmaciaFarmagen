@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import Breadcrumbs from "../components/Breadcrumbs";
 import logoFarmaGen from "../assets/logo.jpg";
@@ -7,9 +7,12 @@ import logoFarmaGen from "../assets/logo.jpg";
 export default function LoginPage() {
   const { loginUser, resendVerificationEmail } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = location.state?.from || "/";
+  const initialMessage = location.state?.message || "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialMessage);
   const [success, setSuccess] = useState("");
   const [pendingVerification, setPendingVerification] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,7 +28,7 @@ export default function LoginPage() {
     const result = await loginUser(email, password);
     setLoading(false);
     if (result.success) {
-      navigate("/");
+      navigate(redirectTo, { replace: true });
     } else {
       setError(result.message);
       setPendingVerification(Boolean(result.requiresEmailVerification));

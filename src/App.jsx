@@ -34,8 +34,8 @@ export default function App() {
           {/* Public Routes */}
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
-            <Route path="products" element={<VerifiedRoute><ProductsPage /></VerifiedRoute>} />
-            <Route path="products/:id" element={<VerifiedRoute><ProductDetail /></VerifiedRoute>} />
+            <Route path="products" element={<ProductsPage />} />
+            <Route path="products/:id" element={<ProductDetail />} />
             <Route path="branches" element={<BranchesPage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />

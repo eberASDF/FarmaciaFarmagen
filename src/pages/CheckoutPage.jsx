@@ -25,7 +25,7 @@ export default function CheckoutPage() {
   }
 
   if ((!user || !user.emailVerified) && !orderComplete) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: "/checkout", message: "Para proceder con tu compra necesitas iniciar sesion." }} />;
   }
 
   const handlePlaceOrder = async (event) => {

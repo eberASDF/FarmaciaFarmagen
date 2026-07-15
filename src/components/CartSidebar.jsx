@@ -269,7 +269,13 @@ export default function CartSidebar({ isOpen, onClose }) {
               <span>Total:</span>
               <span className="cart-total-price">${cartTotal.toFixed(2)}</span>
             </div>
-            <Link to={user?.emailVerified ? "/checkout" : "/login"} onClick={onClose} className="cart-checkout-btn" id="checkout-button">
+            <Link
+              to={user?.emailVerified ? "/checkout" : "/login"}
+              state={!user?.emailVerified ? { from: "/checkout", message: "Para proceder con tu compra necesitas iniciar sesion." } : undefined}
+              onClick={onClose}
+              className="cart-checkout-btn"
+              id="checkout-button"
+            >
               {user ? "Confirmar pedido" : "Iniciar sesion para comprar"}
             </Link>
             <button onClick={clearCart} className="cart-clear-btn">Vaciar Carrito</button>

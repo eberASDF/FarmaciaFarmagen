@@ -56,11 +56,15 @@ export default function Navbar({ onOpenCart }) {
   };
 
   const handleCartOpen = () => {
-    if (!user?.emailVerified) {
-      navigate("/login");
-      return;
-    }
+    setMobileOpen(false);
     onOpenCart();
+  };
+
+  const closeMobileMenu = () => setMobileOpen(false);
+
+  const handleMobileLogout = () => {
+    logout();
+    closeMobileMenu();
   };
 
   return (
@@ -155,7 +159,7 @@ export default function Navbar({ onOpenCart }) {
             </Link>
           )}
 
-          <button className="navbar-hamburger" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu">
+          <button className="navbar-hamburger" onClick={() => setMobileOpen(!mobileOpen)} aria-label={mobileOpen ? "Cerrar menu" : "Abrir menu"} aria-expanded={mobileOpen}>
             {mobileOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
           </button>
         </div>
@@ -184,16 +188,43 @@ export default function Navbar({ onOpenCart }) {
         </nav>
       </div>
 
-      {mobileOpen && (
-        <div className="navbar-mobile-menu">
-          <Link to="/" onClick={() => setMobileOpen(false)} className="navbar-mobile-link">Inicio</Link>
-          <Link to="/products" onClick={() => setMobileOpen(false)} className="navbar-mobile-link">Medicamentos</Link>
-          <Link to="/products?featured=true" onClick={() => setMobileOpen(false)} className="navbar-mobile-link">Promociones</Link>
-          <Link to="/branches" onClick={() => setMobileOpen(false)} className="navbar-mobile-link">Sucursales</Link>
-          {!user && <Link to="/login" onClick={() => setMobileOpen(false)} className="navbar-mobile-link">Iniciar sesion</Link>}
-          {user && <Link to="/account" onClick={() => setMobileOpen(false)} className="navbar-mobile-link">Mi cuenta</Link>}
+      <div className={`mobile-drawer-overlay ${mobileOpen ? "mobile-drawer-overlay--open" : ""}`} onClick={closeMobileMenu} />
+      <aside className={`mobile-drawer ${mobileOpen ? "mobile-drawer--open" : ""}`} aria-hidden={!mobileOpen}>
+        <div className="mobile-drawer-header">
+          <div className="mobile-drawer-brand">
+            <img src={logoFarmaGen} alt="" />
+            <span>Farmacia FarmaGen</span>
+          </div>
+          <button type="button" className="mobile-drawer-close" onClick={closeMobileMenu} aria-label="Cerrar menu">
+            <X aria-hidden="true" />
+          </button>
         </div>
-      )}
+
+        <nav className="mobile-drawer-nav" aria-label="Menu movil">
+          <Link to="/" onClick={closeMobileMenu} className="mobile-drawer-link">Inicio</Link>
+          <Link to="/products" onClick={closeMobileMenu} className="mobile-drawer-link">Catalogo</Link>
+          <Link to="/products" onClick={closeMobileMenu} className="mobile-drawer-link">Categorias</Link>
+          <Link to="/branches" onClick={closeMobileMenu} className="mobile-drawer-link">Sucursales</Link>
+          <button type="button" onClick={handleCartOpen} className="mobile-drawer-link mobile-drawer-link--button">
+            Carrito {cartCount > 0 ? `(${cartCount})` : ""}
+          </button>
+          {!user && (
+            <>
+              <Link to="/login" onClick={closeMobileMenu} className="mobile-drawer-link">Iniciar sesion</Link>
+              <Link to="/register" onClick={closeMobileMenu} className="mobile-drawer-link">Crear cuenta</Link>
+            </>
+          )}
+          {user && (
+            <>
+              <Link to="/account" onClick={closeMobileMenu} className="mobile-drawer-link">Mi cuenta</Link>
+              {user.role === "admin" && <Link to="/admin" onClick={closeMobileMenu} className="mobile-drawer-link">Dashboard admin</Link>}
+              <button type="button" onClick={handleMobileLogout} className="mobile-drawer-link mobile-drawer-link--button">
+                Cerrar sesion
+              </button>
+            </>
+          )}
+        </nav>
+      </aside>
     </header>
   );
 }
