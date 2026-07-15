@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useApp } from "../context/AppContext";
 
 export default function AdminBranches() {
-  const { branches, addBranch, updateBranch, deleteBranch } = useApp();
+  const { branches, addBranch, updateBranch, deleteBranch, toggleBranch } = useApp();
   const [showModal, setShowModal] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
   const [notification, setNotification] = useState("");
@@ -34,7 +34,7 @@ export default function AdminBranches() {
     setShowModal(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.address.trim() || !form.phone.trim() || !form.hours.trim()) {
       showNotif("Falta completar campos obligatorios");
@@ -45,11 +45,13 @@ export default function AdminBranches() {
       return;
     }
     if (editingBranch) {
-      updateBranch(editingBranch.id, form);
-      showNotif(`"${form.name}" actualizada correctamente.`);
+      const result = await updateBranch(editingBranch.id, form);
+      showNotif(result.message);
+      if (!result.success) return;
     } else {
-      addBranch(form);
-      showNotif(`"${form.name}" agregada correctamente.`);
+      const result = await addBranch(form);
+      showNotif(result.message);
+      if (!result.success) return;
     }
     setShowModal(false);
   };
@@ -75,11 +77,11 @@ export default function AdminBranches() {
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const branch = branches.find(b => b.id === id);
-    deleteBranch(id);
+    const result = await deleteBranch(id);
     setConfirmDelete(null);
-    showNotif(`"${branch?.name}" eliminada.`);
+    showNotif(result.message || `"${branch?.name}" eliminada.`);
   };
 
   return (
@@ -99,10 +101,22 @@ export default function AdminBranches() {
             <div className="admin-branch-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <h3 className="admin-branch-card-name" style={{ fontSize: '1.15rem', fontWeight: '800' }}>{branch.name}</h3>
               <div className="admin-actions">
+                <button
+                  onClick={async () => {
+                    const result = await toggleBranch(branch.id);
+                    showNotif(result.message);
+                  }}
+                  className="admin-action-btn admin-action-btn--edit"
+                >
+                  {branch.active ? "Desactivar" : "Activar"}
+                </button>
                 <button onClick={() => openEdit(branch)} className="admin-action-btn admin-action-btn--edit">Editar</button>
                 <button onClick={() => setConfirmDelete(branch.id)} className="admin-action-btn admin-action-btn--delete">Eliminar</button>
               </div>
             </div>
+            <span className={`admin-banner-badge ${!branch.active ? "admin-banner-badge--inactive" : ""}`}>
+              {branch.active ? "Activa" : "Inactiva"}
+            </span>
             {branch.image && (
               <div style={{ height: '140px', overflow: 'hidden', borderRadius: '8px', marginBottom: '12px' }}>
                 <img src={branch.image} alt={branch.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

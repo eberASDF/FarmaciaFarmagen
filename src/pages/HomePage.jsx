@@ -34,6 +34,7 @@ const categoryIcons = {
 
 export default function HomePage() {
   const { activeBanners, featuredProducts, branches, productsLoading, productsError } = useApp();
+  const activeBranches = branches.filter(branch => branch.active !== false);
 
   return (
     <div className="home-page">
@@ -120,7 +121,7 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="branches-preview-grid">
-          {branches.slice(0, 3).map(branch => (
+          {activeBranches.slice(0, 3).map(branch => (
             <div key={branch.id} className="branch-preview-card" id={`branch-preview-${branch.id}`}>
               <div className="branch-preview-icon-wrap">
                 <MapPin className="branch-preview-icon" aria-hidden="true" />

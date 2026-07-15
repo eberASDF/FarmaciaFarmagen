@@ -11,8 +11,9 @@ export default function CheckoutPage() {
   const [processing, setProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(null);
   const [selectedBranch, setSelectedBranch] = useState("");
-  const availableBranches = branches.length
-    ? branches
+  const activeBranches = branches.filter(branch => branch.active !== false);
+  const availableBranches = activeBranches.length
+    ? activeBranches
     : [
         { id: "centro", name: "Sucursal Centro" },
         { id: "norte", name: "Sucursal Norte" },

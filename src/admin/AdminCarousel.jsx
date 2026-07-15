@@ -33,7 +33,7 @@ export default function AdminCarousel() {
     setShowModal(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) {
       showNotif("Falta completar campos obligatorios");
@@ -44,11 +44,13 @@ export default function AdminCarousel() {
       return;
     }
     if (editingBanner) {
-      updateBanner(editingBanner.id, form);
-      showNotif("Banner actualizado correctamente.");
+      const result = await updateBanner(editingBanner.id, form);
+      showNotif(result.message);
+      if (!result.success) return;
     } else {
-      addBanner(form);
-      showNotif("Banner agregado correctamente.");
+      const result = await addBanner(form);
+      showNotif(result.message);
+      if (!result.success) return;
     }
     setShowModal(false);
   };
@@ -105,7 +107,10 @@ export default function AdminCarousel() {
               
               <div className="admin-banner-actions">
                 <button 
-                  onClick={() => toggleBanner(banner.id)} 
+                  onClick={async () => {
+                    const result = await toggleBanner(banner.id);
+                    showNotif(result.message);
+                  }} 
                   className="btn-outline" 
                   style={{ padding: '6px 10px', fontSize: '0.8rem', flexGrow: 1 }}
                 >
@@ -119,7 +124,10 @@ export default function AdminCarousel() {
                   Editar
                 </button>
                 <button 
-                  onClick={() => { deleteBanner(banner.id); showNotif("Banner eliminado."); }} 
+                  onClick={async () => {
+                    const result = await deleteBanner(banner.id);
+                    showNotif(result.message);
+                  }} 
                   className="btn-danger" 
                   style={{ padding: '6px 10px', fontSize: '0.8rem', flexGrow: 1 }}
                 >

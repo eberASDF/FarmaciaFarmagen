@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, Home, LoaderCircle, LogIn } from "lucide-react";
+import { CheckCircle2, Home, LoaderCircle, LogIn } from "lucide-react";
 import { applyActionCode } from "firebase/auth";
 import { auth } from "../firebase/config";
 import logoFarmaGen from "../assets/logo.jpg";
@@ -19,7 +19,7 @@ export default function EmailVerificationPage() {
       void lang;
 
       if (mode !== "verifyEmail" || !oobCode) {
-        setStatus("error");
+        setStatus("processed");
         return;
       }
 
@@ -27,7 +27,7 @@ export default function EmailVerificationPage() {
         await applyActionCode(auth, oobCode);
         setStatus("success");
       } catch {
-        setStatus("error");
+        setStatus("processed");
       }
     };
 
@@ -36,6 +36,7 @@ export default function EmailVerificationPage() {
 
   const isLoading = status === "loading";
   const isSuccess = status === "success";
+  const isProcessed = status === "processed";
 
   return (
     <main className="email-verification-page">
@@ -45,20 +46,20 @@ export default function EmailVerificationPage() {
         </div>
         <span className="email-verification-brand">Farmacia FarmaGen</span>
 
-        <div className={`email-verification-icon ${isLoading ? "email-verification-icon--loading" : ""} ${!isSuccess && !isLoading ? "email-verification-icon--error" : ""}`}>
-          {isLoading ? <LoaderCircle aria-hidden="true" /> : isSuccess ? <CheckCircle2 aria-hidden="true" /> : <AlertTriangle aria-hidden="true" />}
+        <div className={`email-verification-icon ${isLoading ? "email-verification-icon--loading" : ""}`}>
+          {isLoading ? <LoaderCircle aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
         </div>
 
         <h1 id="email-verification-title">
           {isLoading && "Verificando tu correo"}
           {isSuccess && "Correo verificado correctamente"}
-          {!isSuccess && !isLoading && "El enlace no es valido o ya fue utilizado"}
+          {isProcessed && "Verificacion procesada"}
         </h1>
 
         <p>
           {isLoading && "Estamos confirmando tu cuenta de Farmacia FarmaGen. Esto tomara solo un momento."}
           {isSuccess && "Tu correo fue confirmado. Ahora puedes iniciar sesion en tu cuenta."}
-          {!isSuccess && !isLoading && "Puedes pedir otro correo de verificacion desde el inicio de sesion e intentarlo nuevamente."}
+          {isProcessed && "Si tu correo ya fue confirmado, vuelve a la pagina e inicia sesion."}
         </p>
 
         {!isLoading && (

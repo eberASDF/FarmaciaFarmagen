@@ -3,6 +3,7 @@ import Breadcrumbs from "../components/Breadcrumbs";
 
 export default function BranchesPage() {
   const { branches } = useApp();
+  const activeBranches = branches.filter(branch => branch.active !== false);
 
   return (
     <div className="page-container">
@@ -10,11 +11,11 @@ export default function BranchesPage() {
 
       <div className="branches-header">
         <h1 className="page-title">Nuestras Sucursales</h1>
-        <p className="page-subtitle">Visita cualquiera de nuestras {branches.length} ubicaciones</p>
+        <p className="page-subtitle">Visita cualquiera de nuestras {activeBranches.length} ubicaciones</p>
       </div>
 
       <div className="branches-grid">
-        {branches.map(branch => (
+        {activeBranches.map(branch => (
           <div key={branch.id} className="branch-card" id={`branch-${branch.id}`}>
             <div className="branch-card-map" style={{ height: '200px' }}>
               <img

@@ -20,10 +20,6 @@ import {
   where,
 } from "firebase/firestore";
 import { initialProducts, initialBranches, initialBanners } from "../data/initialData";
-import {
-  loadBannersAsync,
-  loadBranchesAsync,
-} from "../services/asyncDataService";
 import { auth, db } from "../firebase/config";
 
 const AppContext = createContext(null);
@@ -53,22 +49,90 @@ function replaceLegacyPharmacyText(value) {
     .split(LEGACY_CITY).join(FARMAGEN_CITY);
 }
 
-function normalizeBranch(branch) {
+function normalizeBranch(branch, docId = branch.id) {
+  const name = replaceLegacyPharmacyText(branch.nombre || branch.name || "");
+  const address = replaceLegacyPharmacyText(branch.direccion || branch.address || "");
+  const phone = branch.telefono || branch.phone || FARMAGEN_PHONE;
+  const hours = branch.horario || branch.hours || FARMAGEN_HOURS;
+  const active = branch.activa ?? branch.active ?? true;
+  const image = branch.imagenUrl || branch.image || "";
+
   return {
     ...branch,
-    name: replaceLegacyPharmacyText(branch.name),
-    address: replaceLegacyPharmacyText(branch.address),
-    phone: FARMAGEN_PHONE,
-    hours: FARMAGEN_HOURS,
+    id: docId,
+    nombre: name,
+    direccion: address,
+    telefono: phone,
+    horario: hours,
+    imagenUrl: image,
+    activa: Boolean(active),
+    name,
+    address,
+    phone,
+    hours,
+    image,
+    active: Boolean(active),
   };
 }
 
-function normalizeBanner(banner) {
+function normalizeBanner(banner, docId = banner.id) {
+  const title = replaceLegacyPharmacyText(banner.titulo || banner.title || "");
+  const subtitle = replaceLegacyPharmacyText(banner.descripcion || banner.subtitle || "");
+  const image = banner.imagenUrl || banner.image || "";
+  const active = banner.activo ?? banner.active ?? true;
+  const order = Number(banner.orden ?? banner.order ?? banner.id ?? 0);
+
   return {
     ...banner,
-    title: replaceLegacyPharmacyText(banner.title),
-    subtitle: replaceLegacyPharmacyText(banner.subtitle),
-    ctaText: replaceLegacyPharmacyText(banner.ctaText),
+    id: docId,
+    titulo: title,
+    descripcion: subtitle,
+    imagenUrl: image,
+    activo: Boolean(active),
+    orden: Number.isFinite(order) ? order : 0,
+    title,
+    subtitle,
+    image,
+    active: Boolean(active),
+    order: Number.isFinite(order) ? order : 0,
+    ctaText: replaceLegacyPharmacyText(banner.ctaText || ""),
+    ctaLink: banner.ctaLink || "",
+  };
+}
+
+function buildBannerFirestorePayload(banner, fallbackOrder = 0) {
+  const title = String(banner.title || banner.titulo || "").trim();
+  const subtitle = String(banner.subtitle || banner.descripcion || "").trim();
+  const image = String(banner.image || banner.imagenUrl || "").trim();
+  const order = Number(banner.order ?? banner.orden ?? fallbackOrder);
+
+  return {
+    titulo: title,
+    descripcion: subtitle,
+    imagenUrl: image,
+    activo: Boolean(banner.active ?? banner.activo ?? true),
+    orden: Number.isFinite(order) ? order : fallbackOrder,
+    ctaText: String(banner.ctaText || "").trim(),
+    ctaLink: String(banner.ctaLink || "").trim(),
+    actualizadoEn: serverTimestamp(),
+  };
+}
+
+function buildBranchFirestorePayload(branch) {
+  const name = String(branch.name || branch.nombre || "").trim();
+  const address = String(branch.address || branch.direccion || "").trim();
+  const phone = String(branch.phone || branch.telefono || "").trim();
+  const hours = String(branch.hours || branch.horario || "").trim();
+  const image = String(branch.image || branch.imagenUrl || "").trim();
+
+  return {
+    nombre: name,
+    direccion: address,
+    telefono: phone,
+    horario: hours,
+    imagenUrl: image,
+    activa: Boolean(branch.active ?? branch.activa ?? true),
+    actualizadoEn: serverTimestamp(),
   };
 }
 
@@ -237,8 +301,8 @@ export function AppProvider({ children }) {
   const [products, setProducts] = useState(() => loadFromStorage("fd_products", initialProducts).map(product => normalizeProduct(product)));
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState("");
-  const [branches, setBranches] = useState(() => loadFromStorage("fd_branches", initialBranches).map(normalizeBranch));
-  const [banners, setBanners] = useState(() => loadFromStorage("fd_banners", initialBanners).map(normalizeBanner));
+  const [branches, setBranches] = useState(() => initialBranches.map(branch => normalizeBranch(branch)));
+  const [banners, setBanners] = useState(() => initialBanners.map(banner => normalizeBanner(banner)));
   const [featuredProducts, setFeaturedProducts] = useState(() => products.filter(product => product.featured));
   const [activeBanners, setActiveBanners] = useState(() => banners.filter(banner => banner.active));
   const [user, setUser] = useState(() => loadFromStorage("fd_user", null));
@@ -276,16 +340,48 @@ export function AppProvider({ children }) {
     setFeaturedProducts(products.filter((product) => product.featured === true));
   }, [products]);
 
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "banners"),
+      (snapshot) => {
+        const firestoreBanners = snapshot.docs
+          .map((bannerDoc) => normalizeBanner(bannerDoc.data(), bannerDoc.id))
+          .sort((a, b) => (a.orden || 0) - (b.orden || 0));
+
+        setBanners(firestoreBanners.length ? firestoreBanners : initialBanners.map(banner => normalizeBanner(banner)));
+      },
+      () => {
+        setBanners(initialBanners.map(banner => normalizeBanner(banner)));
+      }
+    );
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "sucursales"),
+      (snapshot) => {
+        const firestoreBranches = snapshot.docs
+          .map((branchDoc) => normalizeBranch(branchDoc.data(), branchDoc.id))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setBranches(firestoreBranches.length ? firestoreBranches : initialBranches.map(branch => normalizeBranch(branch)));
+      },
+      () => {
+        setBranches(initialBranches.map(branch => normalizeBranch(branch)));
+      }
+    );
+
+    return unsubscribe;
+  }, []);
+
   // Usa FUNCIÓN ASÍNCRONA 3 cada vez que cambia la lista de banners.
   useEffect(() => {
-    loadBannersAsync(banners).then(setActiveBanners);
+    setActiveBanners(banners.filter((banner) => banner.active === true));
   }, [banners]);
 
   // Usa FUNCIÓN ASÍNCRONA 4 para simular la carga inicial de sucursales.
-  useEffect(() => {
-    loadBranchesAsync(loadFromStorage("fd_branches", initialBranches).map(normalizeBranch)).then(setBranches);
-  }, []);
-
   useEffect(() => {
     if (!user?.emailVerified) {
       setOrders([]);
@@ -335,8 +431,6 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!productsLoading && !productsError && products.length > 0) saveToStorage("fd_products", products);
   }, [products, productsLoading, productsError]);
-  useEffect(() => { saveToStorage("fd_branches", branches); }, [branches]);
-  useEffect(() => { saveToStorage("fd_banners", banners); }, [banners]);
   useEffect(() => { saveToStorage("fd_user", user); }, [user]);
   useEffect(() => { saveToStorage("fd_cart", cart); }, [cart]);
   useEffect(() => { saveToStorage("fd_orders", orders); }, [orders]);
@@ -814,37 +908,133 @@ export function AppProvider({ children }) {
   };
 
   // ── Admin: Sucursales ──────────────────────────────────────────────────────
-  const addBranch = (branch) => {
-    const newBranch = { ...branch, id: Date.now() };
-    setBranches(prev => [...prev, newBranch]);
-    return newBranch;
+  const addBranch = async (branch) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para realizar esta accion" };
+    }
+
+    try {
+      const branchRef = doc(collection(db, "sucursales"));
+      await setDoc(branchRef, {
+        ...buildBranchFirestorePayload({ ...branch, active: true }),
+        creadoEn: serverTimestamp(),
+      });
+      return { success: true, message: `"${branch.name}" agregada correctamente.` };
+    } catch {
+      return { success: false, message: "Error al guardar la sucursal" };
+    }
   };
 
-  const updateBranch = (id, data) => {
-    setBranches(prev => prev.map(b => b.id === id ? { ...b, ...data } : b));
+  const updateBranch = async (id, data) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para realizar esta accion" };
+    }
+
+    try {
+      const currentBranch = branches.find(branch => String(branch.id) === String(id));
+      await setDoc(doc(db, "sucursales", String(id)), buildBranchFirestorePayload({ ...currentBranch, ...data }), { merge: true });
+      return { success: true, message: `"${data.name}" actualizada correctamente.` };
+    } catch {
+      return { success: false, message: "Error al actualizar la sucursal" };
+    }
   };
 
-  const deleteBranch = (id) => {
-    setBranches(prev => prev.filter(b => b.id !== id));
+  const deleteBranch = async (id) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para realizar esta accion" };
+    }
+
+    try {
+      await deleteDoc(doc(db, "sucursales", String(id)));
+      return { success: true, message: "Sucursal eliminada." };
+    } catch {
+      return { success: false, message: "Error al eliminar la sucursal" };
+    }
+  };
+
+  const toggleBranch = async (id) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para realizar esta accion" };
+    }
+
+    const currentBranch = branches.find(branch => String(branch.id) === String(id));
+    if (!currentBranch) return { success: false, message: "Sucursal no encontrada" };
+
+    try {
+      const nextActive = !currentBranch.active;
+      await setDoc(doc(db, "sucursales", String(id)), {
+        activa: nextActive,
+        actualizadoEn: serverTimestamp(),
+      }, { merge: true });
+      return { success: true, message: nextActive ? "Sucursal activada." : "Sucursal desactivada." };
+    } catch {
+      return { success: false, message: "Error al actualizar la sucursal" };
+    }
   };
 
   // ── Admin: Banners ─────────────────────────────────────────────────────────
-  const addBanner = (banner) => {
-    const newBanner = { ...banner, id: Date.now(), active: true };
-    setBanners(prev => [...prev, newBanner]);
-    return newBanner;
+  const addBanner = async (banner) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para realizar esta accion" };
+    }
+
+    try {
+      const bannerRef = doc(collection(db, "banners"));
+      await setDoc(bannerRef, {
+        ...buildBannerFirestorePayload({ ...banner, active: true }, banners.length + 1),
+        creadoEn: serverTimestamp(),
+      });
+      return { success: true, message: "Banner agregado correctamente." };
+    } catch {
+      return { success: false, message: "Error al guardar el banner" };
+    }
   };
 
-  const updateBanner = (id, data) => {
-    setBanners(prev => prev.map(b => b.id === id ? { ...b, ...data } : b));
+  const updateBanner = async (id, data) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para realizar esta accion" };
+    }
+
+    try {
+      const currentBanner = banners.find(banner => String(banner.id) === String(id));
+      await setDoc(doc(db, "banners", String(id)), buildBannerFirestorePayload({ ...currentBanner, ...data }), { merge: true });
+      return { success: true, message: "Banner actualizado correctamente." };
+    } catch {
+      return { success: false, message: "Error al actualizar el banner" };
+    }
   };
 
-  const deleteBanner = (id) => {
-    setBanners(prev => prev.filter(b => b.id !== id));
+  const deleteBanner = async (id) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para realizar esta accion" };
+    }
+
+    try {
+      await deleteDoc(doc(db, "banners", String(id)));
+      return { success: true, message: "Banner eliminado." };
+    } catch {
+      return { success: false, message: "Error al eliminar el banner" };
+    }
   };
 
-  const toggleBanner = (id) => {
-    setBanners(prev => prev.map(b => b.id === id ? { ...b, active: !b.active } : b));
+  const toggleBanner = async (id) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para realizar esta accion" };
+    }
+
+    const currentBanner = banners.find(banner => String(banner.id) === String(id));
+    if (!currentBanner) return { success: false, message: "Banner no encontrado" };
+
+    try {
+      const nextActive = !currentBanner.active;
+      await setDoc(doc(db, "banners", String(id)), {
+        activo: nextActive,
+        actualizadoEn: serverTimestamp(),
+      }, { merge: true });
+      return { success: true, message: nextActive ? "Banner activado." : "Banner desactivado." };
+    } catch {
+      return { success: false, message: "Error al actualizar el banner" };
+    }
   };
 
   const value = {
@@ -864,7 +1054,7 @@ export function AppProvider({ children }) {
     updateOrderStatus,
     archiveOrder, deleteOrder,
     addProduct, updateProduct, deleteProduct, toggleFeatured,
-    addBranch, updateBranch, deleteBranch,
+    addBranch, updateBranch, deleteBranch, toggleBranch,
     addBanner, updateBanner, deleteBanner, toggleBanner,
   };
 
