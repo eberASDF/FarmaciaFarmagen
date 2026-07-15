@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Menu,
@@ -17,10 +17,12 @@ import logoFarmaGen from "../assets/logo.jpg";
 export default function Navbar({ onOpenCart }) {
   const { user, logout, cartCount, products, productsLoading } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef(null);
+  const isHome = location.pathname === "/" || location.pathname === "/home";
 
   const normalize = (value) => value
     .normalize("NFD")
@@ -85,6 +87,7 @@ export default function Navbar({ onOpenCart }) {
           </div>
         </Link>
 
+        {isHome && (
         <form className="navbar-search" role="search" onSubmit={handleSearchSubmit} ref={searchRef}>
           <Search className="navbar-search-icon" size={22} aria-hidden="true" />
           <input
@@ -136,6 +139,7 @@ export default function Navbar({ onOpenCart }) {
             </div>
           )}
         </form>
+        )}
 
         <div className="navbar-actions">
           <button onClick={handleCartOpen} className="navbar-cart-btn" id="cart-button" aria-label="Abrir carrito">

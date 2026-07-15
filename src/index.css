@@ -8712,3 +8712,195 @@ body {
     display: none !important;
   }
 }
+
+/* Android-safe mobile rendering: avoid GPU/filter artifacts on Chrome Android. */
+@media (max-width: 1024px) {
+  .navbar,
+  .navbar-inner,
+  .navbar-search-results,
+  .mobile-drawer,
+  .mobile-drawer-overlay,
+  .carousel,
+  .carousel-bg,
+  .carousel-bg-img,
+  .carousel-content,
+  .product-card,
+  .product-card-img,
+  .product-card-img-wrap,
+  .branch-preview-card,
+  .modal,
+  .admin-login-card {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+    will-change: auto !important;
+    perspective: none !important;
+    mix-blend-mode: normal !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .navbar,
+  .carousel,
+  .product-card,
+  .branch-preview-card,
+  .admin-banner-card,
+  .admin-branch-card {
+    box-shadow: none !important;
+  }
+
+  .carousel-bg-img,
+  .carousel:hover .carousel-bg-img,
+  .product-card:hover,
+  .product-card:hover .product-card-img,
+  .product-card-add-btn:hover,
+  .carousel-cta:hover,
+  .navbar-link--promo:hover {
+    transform: none !important;
+  }
+
+  .mobile-drawer {
+    right: -340px !important;
+    transform: none !important;
+  }
+
+  .mobile-drawer--open {
+    right: 0 !important;
+    transform: none !important;
+  }
+
+  .cart-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .site-layout,
+  .site-main,
+  .home-page,
+  .products-page,
+  .page-container,
+  .products-grid-section,
+  .home-categories,
+  .home-featured,
+  .home-branches,
+  .home-cta {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .featured-grid,
+  .products-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .product-card {
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    position: static !important;
+    border-radius: 8px !important;
+  }
+
+  .product-card-link {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .product-card-img-wrap {
+    position: relative !important;
+    width: 100% !important;
+    height: 106px !important;
+    padding-top: 0 !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+  }
+
+  .product-card-img {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    transform: none !important;
+  }
+
+  .product-card-category,
+  .product-card-featured,
+  .product-card-stock-badge {
+    display: none !important;
+    position: static !important;
+  }
+
+  .product-card-body {
+    min-width: 0 !important;
+    padding: 8px !important;
+  }
+
+  .product-card-name {
+    height: auto !important;
+    min-height: 2.25em !important;
+    font-size: 0.76rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .product-card-specs {
+    display: none !important;
+  }
+
+  .product-card-footer {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    padding-top: 7px !important;
+  }
+
+  .product-card-price {
+    font-size: 0.86rem !important;
+  }
+
+  .product-card-add-btn {
+    min-height: 30px !important;
+    padding: 6px !important;
+    font-size: 0.72rem !important;
+    box-shadow: none !important;
+  }
+
+  .carousel {
+    isolation: isolate;
+    overflow: hidden !important;
+  }
+
+  .carousel-bg,
+  .carousel-bg-img {
+    transform: none !important;
+  }
+
+  .carousel-bg-img {
+    display: block !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .featured-grid,
+  .products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .product-card-img-wrap {
+    height: 112px !important;
+  }
+}
