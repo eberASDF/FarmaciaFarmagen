@@ -42,12 +42,8 @@ export default function HomePage() {
 
       <section className="home-trust-strip" aria-label="Beneficios de compra">
         <div className="home-trust-item">
-          <Truck aria-hidden="true" />
-          <span>Entrega local rapida</span>
-        </div>
-        <div className="home-trust-item">
           <ShieldCheck aria-hidden="true" />
-          <span>Compra segura</span>
+          <span>Pedidos seguros</span>
         </div>
         <div className="home-trust-item">
           <HeartPulse aria-hidden="true" />
