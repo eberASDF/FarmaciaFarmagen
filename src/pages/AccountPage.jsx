@@ -55,7 +55,7 @@ export default function AccountPage() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if ((form.name || "").length > 50 || (form.phone || "").length > 100 || (form.address || "").length > 100) return;
+    if ((form.name || "").length > 50 || (form.phone || "").length > 100) return;
     setSavingProfile(true);
     const result = await updateProfile(form);
     setSavingProfile(false);
@@ -71,10 +71,21 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container account-page-redesign">
       <Breadcrumbs />
 
-      <h1 className="page-title">Mi Cuenta</h1>
+      <section className="account-hero">
+        <div>
+          <span className="catalog-eyebrow">Mi cuenta</span>
+          <h1 className="page-title">Hola, {user.name || "cliente"}</h1>
+          <p>Administra tus datos y consulta tus pedidos para recoger en sucursal.</p>
+        </div>
+        {user.role === "admin" && (
+          <Link to="/admin" className="account-admin-link">
+            Ir al dashboard
+          </Link>
+        )}
+      </section>
 
       {message && (
         <div className={`notification ${messageType === "success" ? "notification--success" : ""}`} role="status">
@@ -101,10 +112,6 @@ export default function AccountPage() {
                 <label className="form-label">Telefono</label>
                 <input type="tel" name="phone" maxLength={100} pattern="[0-9\s()+]*" value={form.phone || ""} onChange={handleChange} className="form-input" />
               </div>
-              <div className="form-group">
-                <label className="form-label">Direccion</label>
-                <input type="text" name="address" maxLength={100} value={form.address || ""} onChange={handleChange} className="form-input" />
-              </div>
               <button type="submit" className="btn-primary-lg btn-full" id="save-profile" disabled={savingProfile}>
                 {savingProfile ? "Guardando..." : "Guardar Cambios"}
               </button>
@@ -123,15 +130,6 @@ export default function AccountPage() {
                 <span className="account-info-label">Telefono:</span>
                 <span>{user.phone || "No registrado"}</span>
               </div>
-              <div className="account-info-row">
-                <span className="account-info-label">Direccion:</span>
-                <span>{user.address || "No registrada"}</span>
-              </div>
-              {user.role === "admin" && (
-                <Link to="/admin" className="account-admin-link">
-                  Ir al dashboard
-                </Link>
-              )}
             </div>
           )}
         </div>

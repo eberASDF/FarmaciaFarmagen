@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Edit3, PackagePlus, Star, Trash2, X } from "lucide-react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useApp } from "../context/AppContext";
 import { CATEGORIES } from "../data/initialData";
-import { db, storage } from "../firebase/config";
+import { storage } from "../firebase/config";
 
 const PRODUCT_LIMITS = {
   name: 50,
@@ -86,7 +85,8 @@ export default function AdminProducts() {
       const imageRef = ref(storage, `productos/${Date.now()}-${safeName}`);
       const snapshot = await uploadBytes(imageRef, form.imageFile);
       return await getDownloadURL(snapshot.ref);
-    } catch {
+    } catch (error) {
+      console.error("Error subiendo imagen de producto:", error);
       throw new Error("Error al subir la imagen");
     }
   };
@@ -96,27 +96,10 @@ export default function AdminProducts() {
 
     try {
       await deleteObject(ref(storage, imageUrl));
-    } catch {
+    } catch (error) {
+      console.error("Error eliminando imagen de producto en Storage:", error);
       // Si la URL no corresponde a Storage o ya no existe, no detenemos la eliminación del producto.
     }
-  };
-
-  const saveProductToFirestore = async (imageUrl) => {
-    const price = Number(form.price);
-    const stock = Number(form.stock);
-    const productPayload = {
-      nombre: form.name.trim(),
-      categoria: form.category,
-      precio: price,
-      stock,
-      imagenUrl: imageUrl,
-      descripcion: form.specs.trim(),
-      destacado: Boolean(form.featured),
-      creadoEn: serverTimestamp(),
-      actualizadoEn: serverTimestamp(),
-    };
-
-    return await addDoc(collection(db, "productos"), productPayload);
   };
 
   const handleSubmit = async (e) => {
@@ -162,6 +145,7 @@ export default function AdminProducts() {
           setShowModal(false);
         }
       } catch (error) {
+        console.error("Error actualizando producto desde admin:", error);
         showNotif(error.message === "Error al subir la imagen" ? "Error al subir la imagen" : "Error al actualizar producto");
       } finally {
         setSaving(false);
@@ -170,18 +154,19 @@ export default function AdminProducts() {
       setSaving(true);
       try {
         const imageUrl = await uploadProductImage();
-        const docRef = await saveProductToFirestore(imageUrl);
-        addProduct({
+        const result = await addProduct({
           ...data,
-          id: docRef.id,
           image: imageUrl,
           imageUrl,
-          firestoreId: docRef.id,
+          imagenUrl: imageUrl,
         });
-        showNotif("Producto agregado correctamente");
-        setForm(emptyForm);
-        setShowModal(false);
+        showNotif(result.message);
+        if (result.success) {
+          setForm(emptyForm);
+          setShowModal(false);
+        }
       } catch (error) {
+        console.error("Error guardando producto desde admin:", error);
         showNotif(error.message === "Error al subir la imagen" ? "Error al subir la imagen" : "Error al guardar el producto");
       } finally {
         setSaving(false);

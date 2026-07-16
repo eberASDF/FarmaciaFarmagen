@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { CheckCircle2, MapPin, PackageOpen, Search, Trash2, Truck } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { CATEGORIES } from "../data/initialData";
 
 export default function AdminOrders() {
   const { orders, ordersLoading, ordersError, branches, updateOrderStatus, archiveOrder, user } = useApp();
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
   const [notification, setNotification] = useState("");
 
   const statusLabels = {
@@ -20,13 +23,38 @@ export default function AdminOrders() {
   const filteredOrders = orders.filter((order) => {
     if (order.archivado || order.estado === "archivado" || order.status === "archivado") return false;
     const term = search.toLowerCase();
+    const orderProducts = order.items || order.productos || [];
+    const orderBranch = order.sucursal || order.branchName || "";
     const matchesClient =
       !term ||
       (order.userName || "Invitado").toLowerCase().includes(term) ||
-      (order.user || "invitado").toLowerCase().includes(term);
+      (order.user || "invitado").toLowerCase().includes(term) ||
+      (order.clienteNombre || "").toLowerCase().includes(term) ||
+      (order.clienteCorreo || "").toLowerCase().includes(term);
+    const matchesCategory =
+      !categoryFilter ||
+      orderProducts.some((item) => {
+        const itemCategory = String(item.category || item.categoria || "");
+        const selectedCategory = CATEGORIES.find((category) => category.id === categoryFilter);
+        return itemCategory === categoryFilter || itemCategory === selectedCategory?.label;
+      });
+    const matchesBranch = !branchFilter || orderBranch === branchFilter;
 
-    return matchesClient;
+    return matchesClient && matchesCategory && matchesBranch;
   });
+
+  const branchOptions = Array.from(new Set([
+    ...branches
+      .filter((branch) => branch.active !== false)
+      .map((branch) => branch.name)
+      .filter(Boolean),
+  ]));
+
+  const clearFilters = () => {
+    setSearch("");
+    setCategoryFilter("");
+    setBranchFilter("");
+  };
 
   const markAsDelivered = async (orderId) => {
     const result = await updateOrderStatus(orderId, "entregado");
@@ -56,7 +84,6 @@ export default function AdminOrders() {
           <p className="admin-page-kicker">Operaciones</p>
           <h1 className="admin-page-title">Gestion de pedidos</h1>
         </div>
-        <span className="admin-page-count">{filteredOrders.length} pedidos</span>
       </div>
 
       {notification && <div className="notification notification--success">{notification}</div>}
@@ -75,6 +102,29 @@ export default function AdminOrders() {
             />
           </div>
         </label>
+        <label className="admin-filter-select">
+          <span>Categoria</span>
+          <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+            <option value="">Todas las categorias</option>
+            {CATEGORIES.map((category) => (
+              <option key={category.id} value={category.id}>{category.label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="admin-filter-select">
+          <span>Sucursal</span>
+          <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}>
+            <option value="">Todas las sucursales</option>
+            {branchOptions.map((branchName) => (
+              <option key={branchName} value={branchName}>{branchName}</option>
+            ))}
+          </select>
+        </label>
+        {(search || categoryFilter || branchFilter) && (
+          <button type="button" className="btn-outline admin-filter-clear" onClick={clearFilters}>
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
       {ordersLoading ? (

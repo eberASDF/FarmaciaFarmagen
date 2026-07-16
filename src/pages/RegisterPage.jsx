@@ -7,14 +7,14 @@ export default function RegisterPage() {
   const { register } = useApp();
   const [form, setForm] = useState({
     name: "", email: "", password: "", confirmPassword: "",
-    phone: "", address: "",
+    phone: "",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    const limits = { name: 50, email: 100, password: 100, confirmPassword: 100, phone: 100, address: 100 };
+    const limits = { name: 50, email: 100, password: 100, confirmPassword: 100, phone: 100 };
     const limit = limits[e.target.name] || 100;
     if (e.target.value.length > limit) {
       setError(e.target.name === "name" ? "El nombre no puede superar 50 caracteres" : "Este campo no puede superar 100 caracteres");
@@ -51,7 +51,6 @@ export default function RegisterPage() {
       email: form.email,
       password: form.password,
       phone: form.phone,
-      address: form.address,
     });
     setLoading(false);
 
@@ -62,8 +61,16 @@ export default function RegisterPage() {
     }
   };
   return (
-    <div className="page-container">
+    <div className="page-container auth-page auth-page--register">
       <Breadcrumbs />
+
+      <section className="auth-layout auth-layout--wide">
+        <aside className="auth-info-panel">
+          <img src={logoFarmaGen} alt="" />
+          <span>Cuenta FarmaGen</span>
+          <h2>Compra mas rapido y consulta tus pedidos</h2>
+          <p>Tu telefono es opcional. Puedes completarlo despues desde tu perfil.</p>
+        </aside>
 
       <div className="auth-card auth-card--wide">
         <div className="auth-card-header">
@@ -111,7 +118,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="form-divider">
-            <span>Datos opcionales (puedes agregarlos después)</span>
+            <span>Dato opcional (puedes agregarlo despues)</span>
           </div>
 
           <div className="form-group">
@@ -119,16 +126,12 @@ export default function RegisterPage() {
             <input type="tel" name="phone" maxLength={100} pattern="[0-9\s()+]*" value={form.phone} onChange={handleChange} className="form-input" placeholder="653 534 6587" id="register-phone" />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Dirección de Envío</label>
-            <input type="text" name="address" maxLength={100} value={form.address} onChange={handleChange} className="form-input" placeholder="Calle, número, colonia, ciudad" id="register-address" />
-          </div>
-
           <button type="submit" className={`btn-primary-lg btn-full ${loading ? "btn-loading" : ""}`} disabled={loading || Boolean(success)} id="register-submit">
             {loading ? "Creando cuenta..." : "Crear Cuenta"}
           </button>
         </form>
       </div>
+      </section>
     </div>
   );
 }

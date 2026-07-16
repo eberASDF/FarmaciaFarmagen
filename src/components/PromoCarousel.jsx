@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, ShieldPlus } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function PromoCarousel({ banners }) {
   const [current, setCurrent] = useState(0);
@@ -33,19 +33,17 @@ export default function PromoCarousel({ banners }) {
   const banner = banners[current];
 
   return (
-    <div className="carousel" id="promo-carousel">
+    <section className="carousel promo-banner-full" id="promo-carousel">
       <div className="carousel-bg">
         <img
           src={banner.image}
           alt={banner.title}
           className={`carousel-bg-img ${isTransitioning ? "carousel-bg-img--fade" : ""}`}
         />
-        <div className="carousel-bg-overlay" />
       </div>
 
-      <div className={`carousel-content ${isTransitioning ? "carousel-content--fade" : ""}`}>
+      <div className={`carousel-content promo-banner-copy ${isTransitioning ? "carousel-content--fade" : ""}`}>
         <span className="carousel-badge">
-          <ShieldPlus size={17} aria-hidden="true" />
           Promocion especial
         </span>
         <h2 className="carousel-title">{banner.title}</h2>
@@ -79,6 +77,6 @@ export default function PromoCarousel({ banners }) {
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

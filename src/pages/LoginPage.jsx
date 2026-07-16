@@ -48,8 +48,16 @@ export default function LoginPage() {
     }
   };
   return (
-    <div className="page-container">
+    <div className="page-container auth-page auth-page--login">
       <Breadcrumbs />
+
+      <section className="auth-layout">
+        <aside className="auth-info-panel">
+          <img src={logoFarmaGen} alt="" />
+          <span>Farmacia FarmaGen</span>
+          <h2>Accede a tus pedidos y tickets</h2>
+          <p>Inicia sesion para confirmar pedidos, consultar tu perfil y recoger en sucursal.</p>
+        </aside>
 
       <div className="auth-card">
         <div className="auth-card-header">
@@ -132,6 +140,7 @@ export default function LoginPage() {
         </Link>
 
       </div>
+      </section>
     </div>
   );
 }

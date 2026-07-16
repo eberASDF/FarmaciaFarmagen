@@ -39,7 +39,13 @@ export default function EmailVerificationPage() {
   const isProcessed = status === "processed";
 
   return (
-    <main className="email-verification-page">
+    <main className="email-verification-page email-verification-redesign">
+      <aside className="email-verification-side">
+        <img src={logoFarmaGen} alt="" />
+        <span>Farmacia FarmaGen</span>
+        <h2>Cuenta protegida para tus pedidos</h2>
+        <p>La verificacion ayuda a mantener segura tu cuenta y tus tickets de pedido.</p>
+      </aside>
       <section className="email-verification-card" aria-labelledby="email-verification-title">
         <div className="email-verification-logo-wrap">
           <img src={logoFarmaGen} alt="Farmacia FarmaGen" className="email-verification-logo" />

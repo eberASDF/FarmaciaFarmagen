@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useApp } from "../context/AppContext";
+import { storage } from "../firebase/config";
 
 export default function AdminBranches() {
   const { branches, addBranch, updateBranch, deleteBranch, toggleBranch } = useApp();
@@ -8,7 +10,7 @@ export default function AdminBranches() {
   const [notification, setNotification] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const emptyForm = { name: "", address: "", phone: "", hours: "", image: "" };
+  const emptyForm = { name: "", address: "", phone: "", hours: "", image: "", imageFile: null };
   const [form, setForm] = useState(emptyForm);
 
   const showNotif = (msg) => {
@@ -30,6 +32,7 @@ export default function AdminBranches() {
       phone: branch.phone,
       hours: branch.hours,
       image: branch.image || "",
+      imageFile: null,
     });
     setShowModal(true);
   };
@@ -44,12 +47,23 @@ export default function AdminBranches() {
       showNotif(form.name.length > 50 ? "El nombre no puede superar 50 caracteres" : "Este campo no puede superar 100 caracteres");
       return;
     }
+
+    let imageUrl = "";
+    try {
+      imageUrl = await uploadBranchImage();
+    } catch (error) {
+      showNotif(error.message === "Error al subir la imagen" ? "Error al subir la imagen" : "Error al guardar la sucursal");
+      return;
+    }
+
+    const payload = { ...form, image: imageUrl, imagenUrl: imageUrl };
+
     if (editingBranch) {
-      const result = await updateBranch(editingBranch.id, form);
+      const result = await updateBranch(editingBranch.id, payload);
       showNotif(result.message);
       if (!result.success) return;
     } else {
-      const result = await addBranch(form);
+      const result = await addBranch(payload);
       showNotif(result.message);
       if (!result.success) return;
     }
@@ -63,7 +77,21 @@ export default function AdminBranches() {
       showNotif(name === "name" ? "El nombre no puede superar 50 caracteres" : "Este campo no puede superar 100 caracteres");
       return;
     }
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value, ...(name === "image" ? { imageFile: null } : {}) }));
+  };
+
+  const uploadBranchImage = async () => {
+    if (!form.imageFile) return form.image.trim();
+
+    try {
+      const safeName = form.imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const imageRef = ref(storage, `sucursales/${Date.now()}-${safeName}`);
+      const snapshot = await uploadBytes(imageRef, form.imageFile);
+      return await getDownloadURL(snapshot.ref);
+    } catch (error) {
+      console.error("Error subiendo imagen de sucursal:", error);
+      throw new Error("Error al subir la imagen");
+    }
   };
 
   const handleFileChange = (e) => {
@@ -71,7 +99,7 @@ export default function AdminBranches() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setForm(prev => ({ ...prev, image: reader.result }));
+        setForm(prev => ({ ...prev, image: reader.result, imageFile: file }));
       };
       reader.readAsDataURL(file);
     }

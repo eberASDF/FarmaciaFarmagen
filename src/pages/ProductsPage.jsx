@@ -87,12 +87,21 @@ export default function ProductsPage() {
     : (activeFeatured ? "Destacados" : null);
 
   return (
-    <div className="products-page">
+    <div className="products-page catalog-redesign">
       <Breadcrumbs extra={breadcrumbExtra} />
+
+      <section className="catalog-hero">
+        <div>
+          <span className="catalog-eyebrow">Catalogo FarmaGen</span>
+          <h1>{activeCatLabel ? activeCatLabel : activeFeatured ? "Productos destacados" : "Medicamentos y cuidado personal"}</h1>
+          <p>Consulta productos disponibles y agrega al carrito para recoger tu pedido en sucursal.</p>
+        </div>
+      </section>
 
       <div className="products-layout">
         <aside className="products-sidebar">
           <div className="sidebar-section">
+            <span className="sidebar-kicker">Filtrar por</span>
             <h3 className="sidebar-title">Categorias</h3>
             <div className="sidebar-filters">
               <button
@@ -166,12 +175,11 @@ export default function ProductsPage() {
 
           <div className="products-grid-header">
             <div>
-              <p className="products-kicker">Catalogo</p>
+              <p className="products-kicker">Resultados</p>
               <h1 className="products-grid-title">
                 {activeCatLabel ? activeCatLabel : "Productos"}
               </h1>
             </div>
-            <span className="products-grid-count">{productsLoading ? "Cargando..." : `${filtered.length} productos`}</span>
           </div>
 
           {productsLoading ? (

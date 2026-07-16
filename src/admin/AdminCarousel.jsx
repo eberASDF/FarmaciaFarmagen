@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useApp } from "../context/AppContext";
+import { storage } from "../firebase/config";
 
 export default function AdminCarousel() {
   const { banners, addBanner, updateBanner, deleteBanner, toggleBanner } = useApp();
@@ -7,7 +9,7 @@ export default function AdminCarousel() {
   const [editingBanner, setEditingBanner] = useState(null);
   const [notification, setNotification] = useState("");
 
-  const emptyForm = { title: "", subtitle: "", image: "", ctaText: "", ctaLink: "" };
+  const emptyForm = { title: "", subtitle: "", image: "", imageFile: null, ctaText: "", ctaLink: "" };
   const [form, setForm] = useState(emptyForm);
 
   const showNotif = (msg) => {
@@ -27,6 +29,7 @@ export default function AdminCarousel() {
       title: banner.title,
       subtitle: banner.subtitle,
       image: banner.image,
+      imageFile: null,
       ctaText: banner.ctaText,
       ctaLink: banner.ctaLink,
     });
@@ -43,12 +46,22 @@ export default function AdminCarousel() {
       showNotif(form.title.length > 50 ? "El nombre no puede superar 50 caracteres" : form.subtitle.length > 300 ? "La descripciÃ³n no puede superar 300 caracteres" : "Este campo no puede superar 100 caracteres");
       return;
     }
+    let imageUrl = "";
+    try {
+      imageUrl = await uploadBannerImage();
+    } catch (error) {
+      showNotif(error.message === "Error al subir la imagen" ? "Error al subir la imagen" : "Error al guardar el banner");
+      return;
+    }
+
+    const payload = { ...form, image: imageUrl, imagenUrl: imageUrl };
+
     if (editingBanner) {
-      const result = await updateBanner(editingBanner.id, form);
+      const result = await updateBanner(editingBanner.id, payload);
       showNotif(result.message);
       if (!result.success) return;
     } else {
-      const result = await addBanner(form);
+      const result = await addBanner(payload);
       showNotif(result.message);
       if (!result.success) return;
     }
@@ -62,7 +75,21 @@ export default function AdminCarousel() {
       showNotif(name === "title" ? "El nombre no puede superar 50 caracteres" : name === "subtitle" ? "La descripciÃ³n no puede superar 300 caracteres" : "Este campo no puede superar 100 caracteres");
       return;
     }
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value, ...(name === "image" ? { imageFile: null } : {}) }));
+  };
+
+  const uploadBannerImage = async () => {
+    if (!form.imageFile) return form.image.trim();
+
+    try {
+      const safeName = form.imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const imageRef = ref(storage, `banners/${Date.now()}-${safeName}`);
+      const snapshot = await uploadBytes(imageRef, form.imageFile);
+      return await getDownloadURL(snapshot.ref);
+    } catch (error) {
+      console.error("Error subiendo imagen de banner:", error);
+      throw new Error("Error al subir la imagen");
+    }
   };
 
   const handleFileChange = (e) => {
@@ -70,7 +97,7 @@ export default function AdminCarousel() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setForm(prev => ({ ...prev, image: reader.result }));
+        setForm(prev => ({ ...prev, image: reader.result, imageFile: file }));
       };
       reader.readAsDataURL(file);
     }

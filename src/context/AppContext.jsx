@@ -6,6 +6,7 @@ import {
   signOut,
 } from "firebase/auth";
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -24,8 +25,9 @@ import { auth, db } from "../firebase/config";
 
 const AppContext = createContext(null);
 // Cambia esta URL por el dominio real en produccion si no quieres usar el origen actual.
+const verificationUrl = `${window.location.origin}${import.meta.env.BASE_URL}verificacion-correo`;
 const actionCodeSettings = {
-  url: `${window.location.origin}/verificacion-correo`,
+  url: verificationUrl,
   handleCodeInApp: true,
 };
 const FARMAGEN_PHONE = "653 534 6587";
@@ -186,7 +188,6 @@ function normalizeOrder(order, docId = order.id) {
     clienteNombre: order.clienteNombre || order.userName || "Invitado",
     clienteCorreo: order.clienteCorreo || order.user || "invitado",
     clienteTelefono: order.clienteTelefono || "",
-    clienteDireccion: order.clienteDireccion || order.address || "",
     productos,
     items: productos,
     total: Number(order.total || 0),
@@ -197,7 +198,6 @@ function normalizeOrder(order, docId = order.id) {
     status: estado,
     archivado: Boolean(order.archivado) || estado === "archivado",
     branchId: order.branchId || order.sucursalId || null,
-    address: order.clienteDireccion || order.address || "",
     user: order.clienteCorreo || order.user || "invitado",
     userName: order.clienteNombre || order.userName || "Invitado",
     date: order.date || formatOrderDate(order.creadoEn),
@@ -273,7 +273,6 @@ function normalizeUserProfile(profile, fallbackUser = {}) {
     name: profile.nombre || fallbackUser.name || fallbackUser.email || "",
     email: profile.correo || fallbackUser.email || "",
     phone: profile.telefono || "",
-    address: profile.direccion || "",
     role: profile.rol || fallbackUser.role || "cliente",
     emailVerified: profile.emailVerificado ?? fallbackUser.emailVerified ?? true,
     estadoCuenta: profile.estadoCuenta || fallbackUser.estadoCuenta || "activo",
@@ -298,20 +297,23 @@ function saveToStorage(key, value) {
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 export function AppProvider({ children }) {
-  const [products, setProducts] = useState(() => loadFromStorage("fd_products", initialProducts).map(product => normalizeProduct(product)));
+  const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState("");
   const [branches, setBranches] = useState(() => initialBranches.map(branch => normalizeBranch(branch)));
   const [banners, setBanners] = useState(() => initialBanners.map(banner => normalizeBanner(banner)));
-  const [featuredProducts, setFeaturedProducts] = useState(() => products.filter(product => product.featured));
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [activeBanners, setActiveBanners] = useState(() => banners.filter(banner => banner.active));
-  const [user, setUser] = useState(() => loadFromStorage("fd_user", null));
+  const [user, setUser] = useState(() => {
+    const storedUser = loadFromStorage("fd_user", null);
+    return storedUser?.uid ? storedUser : null;
+  });
   const [cart, setCart] = useState(() => loadFromStorage("fd_cart", []));
-  const [orders, setOrders] = useState(() => loadFromStorage("fd_orders", []).map(normalizeOrder));
+  const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
   const [registeredUsers, setRegisteredUsers] = useState(() => loadFromStorage("fd_registered_users", [
-    { email: "admin@farmacia.com", password: "admin123", name: "Administrador", role: "admin", phone: "", address: "", cardNumber: "", emailVerified: true },
+    { email: "admin@farmacia.com", password: "admin123", name: "Administrador", role: "admin", phone: "", cardNumber: "", emailVerified: true },
   ]));
 
   const loadFirestoreProducts = async () => {
@@ -322,7 +324,8 @@ export function AppProvider({ children }) {
       const snapshot = await getDocs(collection(db, "productos"));
       const firestoreProducts = snapshot.docs.map((productDoc) => normalizeProduct(productDoc.data(), productDoc.id));
       setProducts(firestoreProducts);
-    } catch {
+    } catch (error) {
+      console.error("Error cargando productos:", error);
       setProducts([]);
       setProductsError("No se pudieron cargar los productos. Intenta de nuevo más tarde.");
     } finally {
@@ -330,9 +333,27 @@ export function AppProvider({ children }) {
     }
   };
 
-  // Usa FUNCIÓN ASÍNCRONA 1 para simular la carga inicial del catálogo.
+  // Carga el catálogo real desde Firestore y mantiene la lista sincronizada.
   useEffect(() => {
-    loadFirestoreProducts();
+    setProductsLoading(true);
+    setProductsError("");
+
+    const unsubscribe = onSnapshot(
+      collection(db, "productos"),
+      (snapshot) => {
+        const firestoreProducts = snapshot.docs.map((productDoc) => normalizeProduct(productDoc.data(), productDoc.id));
+        setProducts(firestoreProducts);
+        setProductsLoading(false);
+      },
+      (error) => {
+        console.error("Error escuchando productos:", error);
+        setProducts([]);
+        setProductsError("No se pudieron cargar los productos. Intenta de nuevo más tarde.");
+        setProductsLoading(false);
+      }
+    );
+
+    return unsubscribe;
   }, []);
 
   // Usa FUNCIÓN ASÍNCRONA 2 cada vez que cambia el catálogo.
@@ -350,7 +371,8 @@ export function AppProvider({ children }) {
 
         setBanners(firestoreBanners.length ? firestoreBanners : initialBanners.map(banner => normalizeBanner(banner)));
       },
-      () => {
+      (error) => {
+        console.error("Error cargando banners:", error);
         setBanners(initialBanners.map(banner => normalizeBanner(banner)));
       }
     );
@@ -368,7 +390,8 @@ export function AppProvider({ children }) {
 
         setBranches(firestoreBranches.length ? firestoreBranches : initialBranches.map(branch => normalizeBranch(branch)));
       },
-      () => {
+      (error) => {
+        console.error("Error cargando sucursales:", error);
         setBranches(initialBranches.map(branch => normalizeBranch(branch)));
       }
     );
@@ -417,7 +440,8 @@ export function AppProvider({ children }) {
         setOrders(firestoreOrders);
         setOrdersLoading(false);
       },
-      () => {
+      (error) => {
+        console.error("Error cargando pedidos:", error);
         setOrders([]);
         setOrdersError("No tienes permisos para ver pedidos");
         setOrdersLoading(false);
@@ -428,12 +452,8 @@ export function AppProvider({ children }) {
   }, [user?.emailVerified, user?.role, user?.uid]);
 
   // Persistir en localStorage
-  useEffect(() => {
-    if (!productsLoading && !productsError && products.length > 0) saveToStorage("fd_products", products);
-  }, [products, productsLoading, productsError]);
   useEffect(() => { saveToStorage("fd_user", user); }, [user]);
   useEffect(() => { saveToStorage("fd_cart", cart); }, [cart]);
-  useEffect(() => { saveToStorage("fd_orders", orders); }, [orders]);
   useEffect(() => { saveToStorage("fd_registered_users", registeredUsers); }, [registeredUsers]);
 
   // ── Autenticación ──────────────────────────────────────────────────────────
@@ -478,7 +498,6 @@ export function AppProvider({ children }) {
         name: profile.nombre || firebaseUser.displayName || correo,
         email: profile.correo || correo,
         phone: profile.telefono || "",
-        address: profile.direccion || "",
         role: profile.rol || "cliente",
         emailVerified: true,
         estadoCuenta: "activo",
@@ -491,6 +510,7 @@ export function AppProvider({ children }) {
       setUser(verifiedUser);
       return { success: true, role: verifiedUser.role };
     } catch (error) {
+      console.error("Error iniciando sesion:", error);
       if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
         return { success: false, message: "Correo o contrasena incorrectos." };
       }
@@ -509,23 +529,60 @@ export function AppProvider({ children }) {
   };
 
   // Login solo para admin (rechaza usuarios normales)
-  const loginAdmin = (email, password) => {
-    const found = registeredUsers.find(u => u.email === email && u.password === password);
-    if (found && found.role === "admin") {
-      setUser({ ...found, emailVerified: true });
-      return { success: true, role: found.role };
+  const loginAdmin = async (email, password) => {
+    try {
+      const correo = email.trim().toLowerCase();
+      const credential = await signInWithEmailAndPassword(auth, correo, password);
+      const firebaseUser = credential.user;
+
+      if (!firebaseUser.emailVerified) {
+        await signOut(auth);
+        setUser(null);
+        return { success: false, message: "Debes verificar tu correo antes de iniciar sesion." };
+      }
+
+      const userRef = doc(db, "usuarios", firebaseUser.uid);
+      const snapshot = await getDoc(userRef);
+      const profile = snapshot.exists() ? snapshot.data() : {};
+
+      if (profile.rol !== "admin") {
+        await signOut(auth);
+        setUser(null);
+        return { success: false, message: "Acceso denegado. Esta area es solo para administradores." };
+      }
+
+      const adminUser = {
+        uid: firebaseUser.uid,
+        name: profile.nombre || firebaseUser.displayName || correo,
+        email: profile.correo || correo,
+        phone: profile.telefono || "",
+        role: "admin",
+        emailVerified: true,
+        estadoCuenta: profile.estadoCuenta || "activo",
+      };
+
+      setRegisteredUsers(prev => {
+        const withoutExisting = prev.filter(u => u.email !== adminUser.email);
+        return [...withoutExisting, adminUser];
+      });
+      setUser(adminUser);
+      return { success: true, role: "admin" };
+    } catch (error) {
+      console.error("Error iniciando sesion admin:", error);
+      if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+        return { success: false, message: "Credenciales de administrador incorrectas." };
+      }
+      if (error.code === "permission-denied" || error.message?.includes("Missing or insufficient permissions")) {
+        return { success: false, message: "Firebase bloqueo el acceso por permisos. Revisa las reglas de Firestore para usuarios." };
+      }
+      return { success: false, message: "No se pudo iniciar sesion como administrador." };
     }
-    if (found) {
-      return { success: false, message: "Acceso denegado. Esta área es solo para administradores." };
-    }
-    return { success: false, message: "Credenciales de administrador incorrectas." };
   };
 
   const register = async (userData) => {
     const nombre = userData.name.trim();
     const correo = userData.email.trim().toLowerCase();
     const telefono = userData.phone?.trim() || "";
-    const direccion = userData.address?.trim() || "";
 
     if (!nombre) return { success: false, message: "Ingresa tu nombre completo." };
     if (!correo) return { success: false, message: "Ingresa tu correo electronico." };
@@ -541,7 +598,6 @@ export function AppProvider({ children }) {
         name: nombre,
         email: correo,
         phone: telefono,
-        address: direccion,
         role: "cliente",
         emailVerified: false,
         estadoCuenta: "pendiente_verificacion",
@@ -552,7 +608,6 @@ export function AppProvider({ children }) {
         nombre,
         correo,
         telefono,
-        direccion,
         rol: "cliente",
         emailVerificado: false,
         estadoCuenta: "pendiente_verificacion",
@@ -572,6 +627,7 @@ export function AppProvider({ children }) {
         message: "Tu cuenta fue creada. Te enviamos un correo de verificacion. Revisa tu bandeja de entrada o spam. Despues de verificar tu correo, inicia sesion.",
       };
     } catch (error) {
+      console.error("Error registrando usuario:", error);
       if (error.code === "auth/email-already-in-use") {
         return { success: false, message: "Este correo ya esta en uso." };
       }
@@ -594,6 +650,7 @@ export function AppProvider({ children }) {
       setUser(null);
       return { success: true, message: "Te reenviamos el correo de verificacion. Revisa tu bandeja de entrada o spam." };
     } catch (error) {
+      console.error("Error reenviando verificacion:", error);
       if (error.code === "auth/too-many-requests") {
         return { success: false, message: "Firebase bloqueo temporalmente los intentos. Espera unos minutos e intentalo de nuevo." };
       }
@@ -620,7 +677,8 @@ export function AppProvider({ children }) {
         return [...withoutExisting, profile];
       });
       return { success: true, profile };
-    } catch {
+    } catch (error) {
+      console.error("Error cargando perfil:", error);
       return { success: false, message: "Error al cargar perfil" };
     }
   };
@@ -630,9 +688,8 @@ export function AppProvider({ children }) {
 
     const nombre = (updatedData.name || "").trim();
     const telefono = (updatedData.phone || "").trim();
-    const direccion = (updatedData.address || "").trim();
 
-    if (nombre.length > 50 || telefono.length > 100 || direccion.length > 100) {
+    if (nombre.length > 50 || telefono.length > 100) {
       return { success: false, message: "Error al actualizar perfil" };
     }
 
@@ -642,7 +699,6 @@ export function AppProvider({ children }) {
         nombre,
         correo: user.email,
         telefono,
-        direccion,
         actualizadoEn: serverTimestamp(),
       }, { merge: true });
 
@@ -650,12 +706,12 @@ export function AppProvider({ children }) {
         ...user,
         name: nombre,
         phone: telefono,
-        address: direccion,
       };
       setUser(updated);
       setRegisteredUsers(prev => prev.map(u => u.email === updated.email ? updated : u));
       return { success: true, message: "Perfil actualizado correctamente" };
-    } catch {
+    } catch (error) {
+      console.error("Error actualizando perfil:", error);
       return { success: false, message: "Error al actualizar perfil" };
     }
   };
@@ -784,6 +840,7 @@ export function AppProvider({ children }) {
       clearCart();
       return { success: true, message: "Pedido creado correctamente", order };
     } catch (error) {
+      console.error("Error creando pedido:", error);
       if (error.message === "NO_STOCK") {
         return { success: false, message: "No hay suficiente stock para uno o más productos." };
       }
@@ -807,7 +864,8 @@ export function AppProvider({ children }) {
       });
       setOrders(prev => prev.map(o => String(o.id) === String(orderId) ? { ...o, estado: "entregado", status: "entregado" } : o));
       return { success: true, message: "Pedido marcado como entregado" };
-    } catch {
+    } catch (error) {
+      console.error("Error actualizando pedido:", error);
       return { success: false, message: "Error al actualizar pedido" };
     }
   };
@@ -825,7 +883,8 @@ export function AppProvider({ children }) {
       });
       setOrders(prev => prev.filter(o => String(o.id) !== String(orderId)));
       return { success: true, message: "Pedido archivado correctamente" };
-    } catch {
+    } catch (error) {
+      console.error("Error archivando pedido:", error);
       return { success: false, message: "Error al actualizar pedido" };
     }
   };
@@ -833,10 +892,19 @@ export function AppProvider({ children }) {
   const deleteOrder = archiveOrder;
 
   // ── Admin: Productos ───────────────────────────────────────────────────────
-  const addProduct = (product) => {
-    const newProduct = normalizeProduct(product, product.id || Date.now());
-    setProducts(prev => [...prev, newProduct]);
-    return newProduct;
+  const addProduct = async (product) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para realizar esta accion" };
+    }
+
+    try {
+      const payload = buildProductFirestorePayload(product, true);
+      const docRef = await addDoc(collection(db, "productos"), payload);
+      return { success: true, message: "Producto agregado correctamente", id: docRef.id };
+    } catch (error) {
+      console.error("Error guardando producto:", error);
+      return { success: false, message: "Error al guardar el producto" };
+    }
   };
 
   const updateProduct = async (id, data) => {
@@ -855,7 +923,8 @@ export function AppProvider({ children }) {
       }, id);
       setProducts(prev => prev.map(p => String(p.id) === String(id) ? { ...p, ...updatedProduct } : p));
       return { success: true, message: "Producto actualizado correctamente" };
-    } catch {
+    } catch (error) {
+      console.error("Error actualizando producto:", error);
       return { success: false, message: "Error al actualizar producto" };
     }
   };
@@ -870,7 +939,8 @@ export function AppProvider({ children }) {
       setProducts(prev => prev.filter(p => String(p.id) !== String(id)));
       setCart(prev => prev.filter(item => String(item.id) !== String(id)));
       return { success: true, message: "Producto eliminado correctamente" };
-    } catch {
+    } catch (error) {
+      console.error("Error eliminando producto:", error);
       return { success: false, message: "Error al eliminar producto" };
     }
   };
@@ -902,7 +972,8 @@ export function AppProvider({ children }) {
         success: true,
         message: nextFeatured ? "Producto marcado como destacado" : "Producto quitado de destacados",
       };
-    } catch {
+    } catch (error) {
+      console.error("Error actualizando destacado:", error);
       return { success: false, message: "Error al actualizar producto" };
     }
   };
@@ -914,13 +985,13 @@ export function AppProvider({ children }) {
     }
 
     try {
-      const branchRef = doc(collection(db, "sucursales"));
-      await setDoc(branchRef, {
+      await addDoc(collection(db, "sucursales"), {
         ...buildBranchFirestorePayload({ ...branch, active: true }),
         creadoEn: serverTimestamp(),
       });
       return { success: true, message: `"${branch.name}" agregada correctamente.` };
-    } catch {
+    } catch (error) {
+      console.error("Error guardando sucursal:", error);
       return { success: false, message: "Error al guardar la sucursal" };
     }
   };
@@ -934,7 +1005,8 @@ export function AppProvider({ children }) {
       const currentBranch = branches.find(branch => String(branch.id) === String(id));
       await setDoc(doc(db, "sucursales", String(id)), buildBranchFirestorePayload({ ...currentBranch, ...data }), { merge: true });
       return { success: true, message: `"${data.name}" actualizada correctamente.` };
-    } catch {
+    } catch (error) {
+      console.error("Error actualizando sucursal:", error);
       return { success: false, message: "Error al actualizar la sucursal" };
     }
   };
@@ -947,7 +1019,8 @@ export function AppProvider({ children }) {
     try {
       await deleteDoc(doc(db, "sucursales", String(id)));
       return { success: true, message: "Sucursal eliminada." };
-    } catch {
+    } catch (error) {
+      console.error("Error eliminando sucursal:", error);
       return { success: false, message: "Error al eliminar la sucursal" };
     }
   };
@@ -967,7 +1040,8 @@ export function AppProvider({ children }) {
         actualizadoEn: serverTimestamp(),
       }, { merge: true });
       return { success: true, message: nextActive ? "Sucursal activada." : "Sucursal desactivada." };
-    } catch {
+    } catch (error) {
+      console.error("Error cambiando estado de sucursal:", error);
       return { success: false, message: "Error al actualizar la sucursal" };
     }
   };
@@ -979,13 +1053,13 @@ export function AppProvider({ children }) {
     }
 
     try {
-      const bannerRef = doc(collection(db, "banners"));
-      await setDoc(bannerRef, {
+      await addDoc(collection(db, "banners"), {
         ...buildBannerFirestorePayload({ ...banner, active: true }, banners.length + 1),
         creadoEn: serverTimestamp(),
       });
       return { success: true, message: "Banner agregado correctamente." };
-    } catch {
+    } catch (error) {
+      console.error("Error guardando banner:", error);
       return { success: false, message: "Error al guardar el banner" };
     }
   };
@@ -999,7 +1073,8 @@ export function AppProvider({ children }) {
       const currentBanner = banners.find(banner => String(banner.id) === String(id));
       await setDoc(doc(db, "banners", String(id)), buildBannerFirestorePayload({ ...currentBanner, ...data }), { merge: true });
       return { success: true, message: "Banner actualizado correctamente." };
-    } catch {
+    } catch (error) {
+      console.error("Error actualizando banner:", error);
       return { success: false, message: "Error al actualizar el banner" };
     }
   };
@@ -1012,7 +1087,8 @@ export function AppProvider({ children }) {
     try {
       await deleteDoc(doc(db, "banners", String(id)));
       return { success: true, message: "Banner eliminado." };
-    } catch {
+    } catch (error) {
+      console.error("Error eliminando banner:", error);
       return { success: false, message: "Error al eliminar el banner" };
     }
   };
@@ -1032,7 +1108,8 @@ export function AppProvider({ children }) {
         actualizadoEn: serverTimestamp(),
       }, { merge: true });
       return { success: true, message: nextActive ? "Banner activado." : "Banner desactivado." };
-    } catch {
+    } catch (error) {
+      console.error("Error cambiando estado de banner:", error);
       return { success: false, message: "Error al actualizar el banner" };
     }
   };

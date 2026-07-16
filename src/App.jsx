@@ -24,7 +24,7 @@ import AdminCarousel from "./admin/AdminCarousel";
 import AdminFeatured from "./admin/AdminFeatured";
 import AdminOrders from "./admin/AdminOrders";
 
-const routerBasename = window.location.pathname.startsWith("/eber_higuera") ? "/eber_higuera/" : "/";
+const routerBasename = import.meta.env.BASE_URL;
 
 export default function App() {
   return (

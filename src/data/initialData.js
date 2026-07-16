@@ -57,14 +57,6 @@ export const initialBranches = [
     image: "https://images.unsplash.com/photo-1576602976047-174e57a47881?auto=format&fit=crop&q=80&w=400&h=300",
   },
   {
-    id: 3,
-    name: "Sucursal Plaza del Sol",
-    address: "Centro Comercial Plaza del Sol, Local 15, Col. San Felipe",
-    phone: "653 534 6587",
-    hours: "Lunes a sábado: 8 a.m. – 10 p.m. | Domingo: 9 a.m. – 9 p.m.",
-    image: "https://images.unsplash.com/photo-1628771065518-0d82f1938462?auto=format&fit=crop&q=80&w=400&h=300",
-  },
-  {
     id: 4,
     name: "Sucursal Sur",
     address: "Av. de las Industrias #890, Parque Industrial, San Luis Río Colorado, Sonora",
@@ -96,7 +88,7 @@ export const initialBanners = [
   {
     id: 3,
     title: "Farmacia FarmaGen cerca de ti",
-    subtitle: "4 sucursales con atención especializada y precios accesibles.",
+    subtitle: "3 sucursales con atención especializada y precios accesibles.",
     image: "https://images.unsplash.com/photo-1631549916768-4f8c1770fad8?auto=format&fit=crop&q=80&w=1200",
     ctaText: "Ver Sucursales",
     ctaLink: "/branches",

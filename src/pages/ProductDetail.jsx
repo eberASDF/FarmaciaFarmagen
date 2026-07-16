@@ -67,7 +67,7 @@ export default function ProductDetail() {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container product-detail-page">
       <Breadcrumbs extra={product.name} />
 
       {showNotification && (
@@ -76,7 +76,7 @@ export default function ProductDetail() {
         </div>
       )}
 
-      <div className="product-detail">
+      <section className="product-detail">
         <div className="product-detail-img-wrap">
           <img src={imageSrc} alt={product.name} className="product-detail-img" />
           {product.featured && (
@@ -89,7 +89,6 @@ export default function ProductDetail() {
             {categoryInfo?.label}
           </span>
           <h1 className="product-detail-name">{product.name}</h1>
-          <p className="product-detail-specs">{product.specs}</p>
 
           <div className="product-detail-price-row">
             <span className="product-detail-price">${price.toFixed(2)}</span>
@@ -128,7 +127,17 @@ export default function ProductDetail() {
             </button>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="product-detail-description">
+        <h2>Descripcion del producto</h2>
+        <p>{product.specs || "Producto disponible para pedido y recoleccion en sucursal."}</p>
+        <div className="product-detail-basics">
+          <span><strong>Categoria:</strong> {categoryInfo?.label || product.category}</span>
+          <span><strong>Disponibilidad:</strong> {isOutOfStock ? "Agotado" : "Disponible"}</span>
+          <span><strong>Entrega:</strong> Recoger en sucursal</span>
+        </div>
+      </section>
     </div>
   );
 }

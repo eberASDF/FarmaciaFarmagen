@@ -37,34 +37,53 @@ export default function HomePage() {
   const activeBranches = branches.filter(branch => branch.active !== false);
 
   return (
-    <div className="home-page">
-      <PromoCarousel banners={activeBanners} />
+    <div className="home-page home-market">
+      <section className="home-hero-full">
+        <PromoCarousel banners={activeBanners} />
+      </section>
 
-      <section className="home-trust-strip" aria-label="Beneficios de compra">
-        <div className="home-trust-item">
-          <ShieldCheck aria-hidden="true" />
-          <span>Pedidos seguros</span>
-        </div>
-        <div className="home-trust-item">
+      <section className="home-service-bar" aria-label="Beneficios de compra">
+        <div className="home-service-item">
           <HeartPulse aria-hidden="true" />
-          <span>Atencion farmaceutica</span>
+          <div>
+            <strong>Atencion farmaceutica</strong>
+            <span>Orientacion clara antes de comprar</span>
+          </div>
+        </div>
+        <div className="home-service-item">
+          <Truck aria-hidden="true" />
+          <div>
+            <strong>Pedido para recoger</strong>
+            <span>Elige sucursal y pasa por tu pedido</span>
+          </div>
+        </div>
+        <div className="home-service-item">
+          <ShieldCheck aria-hidden="true" />
+          <div>
+            <strong>Compra segura</strong>
+            <span>Datos protegidos y productos verificados</span>
+          </div>
         </div>
       </section>
 
-      <section className="home-categories">
-        <div className="section-header">
+      <section className="home-section home-categories">
+        <div className="home-section-head">
           <div>
-            <h2 className="section-title">Farmacia online de confianza</h2>
-            <p className="section-subtitle">Encuentra lo que necesitas por tipo de cuidado</p>
+            <span className="home-section-kicker">Comprar por categoria</span>
+            <h2 className="section-title">Encuentra rapido lo que necesitas</h2>
           </div>
+          <Link to="/products" className="section-link">
+            Ver catalogo
+            <ChevronRight size={18} aria-hidden="true" />
+          </Link>
         </div>
-        <div className="categories-grid">
+        <div className="categories-grid categories-grid--compact">
           {CATEGORIES.map(cat => {
             const Icon = categoryIcons[cat.id] || Pill;
             return (
               <Link to={`/products?cat=${cat.id}`} key={cat.id} className="category-chip" id={`cat-${cat.id}`}>
                 <span className={`category-chip-icon category-chip-icon--${cat.id}`}>
-                  <Icon size={30} strokeWidth={1.9} aria-hidden="true" />
+                  <Icon size={24} strokeWidth={1.9} aria-hidden="true" />
                 </span>
                 <span className="category-chip-label">{cat.label}</span>
               </Link>
@@ -73,11 +92,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="home-featured">
-        <div className="section-header">
+      <section className="home-section home-featured">
+        <div className="home-section-head">
           <div>
+            <span className="home-section-kicker">Seleccionados por nuestros especialistas</span>
             <h2 className="section-title">Productos destacados</h2>
-            <p className="section-subtitle">Seleccionados por nuestros especialistas</p>
           </div>
           <Link to="/products?featured=true" className="section-link">
             Ver todos
@@ -105,14 +124,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="home-branches">
-        <div className="section-header">
+      <section className="home-section home-branches">
+        <div className="home-section-head">
           <div>
-            <h2 className="section-title">Nuestras sucursales</h2>
-            <p className="section-subtitle">Encuentranos cerca de ti</p>
+            <span className="home-section-kicker">Recoge cerca de ti</span>
+            <h2 className="section-title">Sucursales FarmaGen</h2>
           </div>
           <Link to="/branches" className="section-link">
-            Ver todas
+            Ver sucursales
             <ChevronRight size={18} aria-hidden="true" />
           </Link>
         </div>
@@ -132,16 +151,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="home-cta">
-        <div className="home-cta-content">
-          <h2 className="home-cta-title">Compra con seguimiento y ofertas personalizadas</h2>
-          <p className="home-cta-text">
-            Crea tu cuenta para guardar tus datos de envio, consultar pedidos y recibir promociones.
-          </p>
-          <Link to="/register" className="home-cta-btn" id="register-cta">
-            Crear cuenta
-            <ChevronRight size={18} aria-hidden="true" />
-          </Link>
+      <section className="home-account-strip">
+        <div>
+          <span className="home-section-kicker">Tu farmacia en linea</span>
+          <h2>Haz tu pedido y recógelo en sucursal</h2>
+          <p>Crea una cuenta para consultar tus pedidos, descargar tickets y agilizar futuras compras.</p>
+        </div>
+        <div className="home-account-actions">
+          <Link to="/products" className="home-cta-btn">Comprar ahora</Link>
+          <Link to="/register" className="section-link" id="register-cta">Crear cuenta</Link>
         </div>
       </section>
     </div>

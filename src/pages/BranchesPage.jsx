@@ -6,13 +6,17 @@ export default function BranchesPage() {
   const activeBranches = branches.filter(branch => branch.active !== false);
 
   return (
-    <div className="page-container">
+    <div className="page-container branches-page-redesign">
       <Breadcrumbs />
 
-      <div className="branches-header">
-        <h1 className="page-title">Nuestras Sucursales</h1>
-        <p className="page-subtitle">Visita cualquiera de nuestras {activeBranches.length} ubicaciones</p>
-      </div>
+      <section className="branches-hero">
+        <div>
+          <span className="catalog-eyebrow">Sucursales</span>
+          <h1 className="page-title">Recoge tu pedido cerca de ti</h1>
+          <p className="page-subtitle">Elige entre {activeBranches.length} sucursales activas de Farmacia FarmaGen.</p>
+        </div>
+        <strong>{activeBranches.length}</strong>
+      </section>
 
       <div className="branches-grid">
         {activeBranches.map(branch => (

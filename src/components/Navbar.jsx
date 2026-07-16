@@ -1,8 +1,11 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Clock,
+  Home,
   Menu,
   PackageSearch,
+  Phone,
   Search,
   ShieldCheck,
   ShoppingCart,
@@ -72,8 +75,9 @@ export default function Navbar({ onOpenCart }) {
   return (
     <header className="navbar">
       <div className="navbar-promo-strip">
-        <ShieldCheck size={16} aria-hidden="true" />
-        Envio gratis en pedidos superiores a $899
+        <span><Clock size={15} aria-hidden="true" /> Lunes a sabado 8 a.m. - 10 p.m. | Domingo 9 a.m. - 9 p.m.</span>
+        <span><Phone size={15} aria-hidden="true" /> 653 534 6587</span>
+        <span><ShieldCheck size={15} aria-hidden="true" /> Pedidos para recoger en sucursal</span>
       </div>
 
       <div className="navbar-inner">
@@ -154,6 +158,11 @@ export default function Navbar({ onOpenCart }) {
                 <UserRound className="navbar-user-icon" aria-hidden="true" />
                 {user.name || user.email}
               </Link>
+              {user.role === "admin" && (
+                <Link to="/admin" className="navbar-admin-btn">
+                  Admin
+                </Link>
+              )}
               <button onClick={logout} className="navbar-logout-btn" id="logout-button">Salir</button>
             </div>
           ) : (
@@ -171,9 +180,13 @@ export default function Navbar({ onOpenCart }) {
 
       <div className="navbar-menu-row">
         <nav className="navbar-links">
+          <Link to="/" className="navbar-link">
+            <Home size={17} aria-hidden="true" />
+            Inicio
+          </Link>
           <Link to="/products" className="navbar-link navbar-link--strong">
             <Menu size={20} aria-hidden="true" />
-            Categorias
+            Catalogo
           </Link>
           <Link to="/products" className="navbar-link">Medicamentos</Link>
           <Link to="/products?featured=true" className="navbar-link navbar-link--promo">

@@ -16,17 +16,21 @@ export default function AdminLoginPage() {
     if (user?.role === "admin") navigate("/admin", { replace: true });
   }, [navigate, user]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
     setLoading(true);
 
-    window.setTimeout(() => {
-      const result = loginAdmin(email.trim(), password);
+    try {
+      const result = await loginAdmin(email.trim(), password);
       setLoading(false);
       if (result.success) navigate("/admin", { replace: true });
       else setError(result.message);
-    }, 450);
+    } catch (error) {
+      console.error("Error en formulario de acceso admin:", error);
+      setLoading(false);
+      setError("No se pudo iniciar sesion como administrador.");
+    }
   };
 
   return (

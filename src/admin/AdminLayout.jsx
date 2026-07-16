@@ -1,4 +1,4 @@
-import { NavLink, Outlet, Navigate, Link } from "react-router-dom";
+import { NavLink, Outlet, Navigate, Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Building2,
@@ -15,6 +15,16 @@ import logoFarmaGen from "../assets/logo.jpg";
 
 export default function AdminLayout() {
   const { user, logout } = useApp();
+  const location = useLocation();
+  const sectionTitle = location.pathname.includes("/branches")
+    ? "Sucursales"
+    : location.pathname.includes("/carousel")
+      ? "Banners"
+      : location.pathname.includes("/featured")
+        ? "Destacados"
+        : location.pathname.includes("/orders")
+          ? "Pedidos"
+          : "Productos";
 
   if (!user || user.role !== "admin") {
     return <Navigate to="/admin-access" />;
@@ -83,7 +93,10 @@ export default function AdminLayout() {
 
       <main className="admin-content">
         <div className="admin-content-top">
-          <Breadcrumbs />
+          <div className="admin-content-title">
+            <Breadcrumbs />
+            <h1>{sectionTitle}</h1>
+          </div>
           <span className="admin-status-pill">
             <Sparkles size={15} aria-hidden="true" />
             Tienda activa

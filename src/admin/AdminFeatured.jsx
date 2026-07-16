@@ -28,7 +28,6 @@ export default function AdminFeatured() {
     <div className="admin-page">
       <div className="admin-page-header">
         <h1 className="admin-page-title">Productos Destacados</h1>
-        <span className="admin-page-count">{featuredProducts.length} productos destacados</span>
       </div>
 
       <p className="admin-page-desc">

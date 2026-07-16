@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Plus, ShieldCheck, Star } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { CATEGORIES } from "../data/initialData";
 
@@ -22,20 +22,14 @@ export default function ProductCard({ product }) {
       <Link to={`/products/${product.id}`} className="product-card-link">
         <div className="product-card-img-wrap">
           <img src={imageSrc} alt={product.name} className="product-card-img" loading="lazy" />
-          <span className="product-card-category">
-            <ShieldCheck size={14} aria-hidden="true" />
-            {categoryInfo?.label || product.category}
-          </span>
-          {isOutOfStock && <span className="product-card-featured product-card-stock-badge">Agotado</span>}
-          {product.featured && (
-            <span className="product-card-featured">
-              <Star size={13} aria-hidden="true" />
-              Destacado
-            </span>
-          )}
         </div>
       </Link>
       <div className="product-card-body">
+        <div className="product-card-meta-row">
+          <span className="product-card-category">{categoryInfo?.label || product.category}</span>
+          {isOutOfStock && <span className="product-card-stock-badge">Agotado</span>}
+          {!isOutOfStock && product.featured && <span className="product-card-featured">Destacado</span>}
+        </div>
         <Link to={`/products/${product.id}`} className="product-card-name-link">
           <h3 className="product-card-name">{product.name}</h3>
         </Link>

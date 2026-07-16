@@ -50,9 +50,9 @@ export default function CheckoutPage() {
 
   if (orderComplete) {
     return (
-      <div className="page-container">
+      <div className="page-container checkout-page">
         <Breadcrumbs />
-        <div className="checkout-success">
+        <div className="checkout-success checkout-success-redesign">
           <div className="checkout-success-icon">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
@@ -85,14 +85,22 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container checkout-page">
       <Breadcrumbs />
 
-      <h1 className="page-title">Confirmar pedido</h1>
+      <section className="checkout-hero">
+        <div>
+          <span className="catalog-eyebrow">Finalizar pedido</span>
+          <h1 className="page-title">Confirma tu pedido para recoger</h1>
+          <p>Revisa los productos y selecciona la sucursal donde pasaras por tu pedido.</p>
+        </div>
+        <strong>${cartTotal.toFixed(2)}</strong>
+      </section>
 
       <div className="checkout-layout">
         <div className="checkout-summary">
-          <h2 className="checkout-section-title">Resumen del Pedido</h2>
+          <span className="checkout-step">1</span>
+          <h2 className="checkout-section-title">Resumen del pedido</h2>
           <div className="checkout-items">
             {cart.map(item => (
               <div key={item.id} className="checkout-item">
@@ -114,6 +122,7 @@ export default function CheckoutPage() {
         </div>
 
         <form onSubmit={handlePlaceOrder} className="checkout-form">
+          <span className="checkout-step">2</span>
           <h2 className="checkout-section-title">Recoger en sucursal</h2>
           <div className="checkout-payment-note">
             Tu pedido quedara registrado para recogerlo directamente en la sucursal.

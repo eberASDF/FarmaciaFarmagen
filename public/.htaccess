@@ -1,12 +1,8 @@
-Options -MultiViews
-DirectoryIndex index.html
-
-RewriteEngine On
-
-# Los archivos y carpetas reales se entregan normalmente.
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-
-# Las rutas de React, como /admin-access, cargan la aplicación principal.
-RewriteRule ^ index.html [L]
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /eber_higuera/
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /eber_higuera/index.html [L]
+</IfModule>
