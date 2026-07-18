@@ -10,6 +10,7 @@ export default function CartSidebar({ isOpen, onClose }) {
   const statusLabels = {
     pendiente: "Pendiente",
     entregado: "Entregado",
+    cancelado: "Cancelado",
     archivado: "Archivado",
   };
 

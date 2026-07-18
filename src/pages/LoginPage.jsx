@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import Breadcrumbs from "../components/Breadcrumbs";
 import logoFarmaGen from "../assets/logo.jpg";
+import { clearLoginAttempts, getLockMessage, getLoginLock, registerFailedLoginAttempt } from "../utils/loginAttempts";
+import { FORM_LIMITS, notifyLimitReached } from "../utils/formLimits";
 
 export default function LoginPage() {
   const { loginUser, resendVerificationEmail } = useApp();
@@ -23,14 +25,27 @@ export default function LoginPage() {
     setError("");
     setSuccess("");
     setPendingVerification(false);
+
+    const lock = getLoginLock("cliente");
+    if (lock.locked) {
+      setError(getLockMessage(lock.remainingMinutes));
+      return;
+    }
+
     setLoading(true);
 
     const result = await loginUser(email, password);
     setLoading(false);
     if (result.success) {
+      clearLoginAttempts("cliente");
       navigate(redirectTo, { replace: true });
     } else {
-      setError(result.message);
+      if (result.invalidCredentials) {
+        const attempt = registerFailedLoginAttempt("cliente");
+        setError(attempt.locked ? getLockMessage(attempt.remainingMinutes) : result.message);
+      } else {
+        setError(result.message);
+      }
       setPendingVerification(Boolean(result.requiresEmailVerification));
     }
   };
@@ -87,9 +102,12 @@ export default function LoginPage() {
             <input
               type="email"
               required
-              maxLength={100}
+              maxLength={FORM_LIMITS.email}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                notifyLimitReached({ fieldName: "email", value: e.target.value, limit: FORM_LIMITS.email, notify: setError });
+                setEmail(e.target.value.slice(0, FORM_LIMITS.email));
+              }}
               className="form-input"
               placeholder="tu@correo.com"
               id="login-email"
@@ -101,14 +119,21 @@ export default function LoginPage() {
             <input
               type="password"
               required
-              maxLength={100}
+              maxLength={FORM_LIMITS.password}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                notifyLimitReached({ fieldName: "password", value: e.target.value, limit: FORM_LIMITS.password, notify: setError });
+                setPassword(e.target.value.slice(0, FORM_LIMITS.password));
+              }}
               className="form-input"
               placeholder="••••••••"
               id="login-password"
             />
           </div>
+
+          <Link to="/recuperar-contrasena" className="auth-text-action">
+            ¿Olvidó su contraseña?
+          </Link>
 
           <button
             type="submit"

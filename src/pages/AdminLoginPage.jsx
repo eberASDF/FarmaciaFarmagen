@@ -3,6 +3,8 @@ import { ArrowLeft, LockKeyhole, LogIn, Mail, ShieldCheck } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import logoFarmaGen from "../assets/logo.jpg";
+import { clearLoginAttempts, getLockMessage, getLoginLock, registerFailedLoginAttempt } from "../utils/loginAttempts";
+import { FORM_LIMITS, notifyLimitReached } from "../utils/formLimits";
 
 export default function AdminLoginPage() {
   const { loginAdmin, user } = useApp();
@@ -19,13 +21,27 @@ export default function AdminLoginPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+
+    const lock = getLoginLock("admin");
+    if (lock.locked) {
+      setError(getLockMessage(lock.remainingMinutes));
+      return;
+    }
+
     setLoading(true);
 
     try {
       const result = await loginAdmin(email.trim(), password);
       setLoading(false);
-      if (result.success) navigate("/admin", { replace: true });
-      else setError(result.message);
+      if (result.success) {
+        clearLoginAttempts("admin");
+        navigate("/admin", { replace: true });
+      } else if (result.invalidCredentials) {
+        const attempt = registerFailedLoginAttempt("admin");
+        setError(attempt.locked ? getLockMessage(attempt.remainingMinutes) : result.message);
+      } else {
+        setError(result.message);
+      }
     } catch (error) {
       console.error("Error en formulario de acceso admin:", error);
       setLoading(false);
@@ -58,9 +74,12 @@ export default function AdminLoginPage() {
               <input
                 type="email"
                 required
-                maxLength={100}
+                maxLength={FORM_LIMITS.email}
                 value={email}
-                onChange={(event) => setEmail(event.target.value.slice(0, 100))}
+                onChange={(event) => {
+                  notifyLimitReached({ fieldName: "email", value: event.target.value, limit: FORM_LIMITS.email, notify: setError });
+                  setEmail(event.target.value.slice(0, FORM_LIMITS.email));
+                }}
                 className="admin-login-input"
                 placeholder="Ingresa tu correo"
                 id="admin-login-email"
@@ -76,9 +95,12 @@ export default function AdminLoginPage() {
               <input
                 type="password"
                 required
-                maxLength={100}
+                maxLength={FORM_LIMITS.password}
                 value={password}
-                onChange={(event) => setPassword(event.target.value.slice(0, 100))}
+                onChange={(event) => {
+                  notifyLimitReached({ fieldName: "password", value: event.target.value, limit: FORM_LIMITS.password, notify: setError });
+                  setPassword(event.target.value.slice(0, FORM_LIMITS.password));
+                }}
                 className="admin-login-input"
                 placeholder="Ingresa tu contraseña"
                 id="admin-login-password"
@@ -86,6 +108,10 @@ export default function AdminLoginPage() {
               />
             </div>
           </div>
+
+          <Link to="/recuperar-contrasena" className="admin-login-forgot">
+            ¿Olvidó su contraseña?
+          </Link>
 
           <button type="submit" className="admin-login-btn" disabled={loading} id="admin-login-submit">
             {loading ? <span className="admin-login-spinner" /> : <LogIn aria-hidden="true" />}

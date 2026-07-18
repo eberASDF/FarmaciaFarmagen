@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApp } from "../context/AppContext";
 import Breadcrumbs from "../components/Breadcrumbs";
 import logoFarmaGen from "../assets/logo.jpg";
+import { FORM_LIMITS, getLimitMessage, notifyLimitReached } from "../utils/formLimits";
 
 export default function RegisterPage() {
   const { register } = useApp();
@@ -14,12 +15,13 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    const limits = { name: 50, email: 100, password: 100, confirmPassword: 100, phone: 100 };
+    const limits = { name: FORM_LIMITS.name, email: FORM_LIMITS.email, password: FORM_LIMITS.password, confirmPassword: FORM_LIMITS.password, phone: FORM_LIMITS.phone };
     const limit = limits[e.target.name] || 100;
     if (e.target.value.length > limit) {
-      setError(e.target.name === "name" ? "El nombre no puede superar 50 caracteres" : "Este campo no puede superar 100 caracteres");
+      setError(getLimitMessage(e.target.name, limit));
       return;
     }
+    notifyLimitReached({ fieldName: e.target.name, value: e.target.value, limit, notify: setError });
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
@@ -123,7 +125,7 @@ export default function RegisterPage() {
 
           <div className="form-group">
             <label className="form-label">Teléfono</label>
-            <input type="tel" name="phone" maxLength={100} pattern="[0-9\s()+]*" value={form.phone} onChange={handleChange} className="form-input" placeholder="653 534 6587" id="register-phone" />
+            <input type="tel" name="phone" maxLength={FORM_LIMITS.phone} pattern="[0-9\s()+]*" value={form.phone} onChange={handleChange} className="form-input" placeholder="653 534 6587" id="register-phone" />
           </div>
 
           <button type="submit" className={`btn-primary-lg btn-full ${loading ? "btn-loading" : ""}`} disabled={loading || Boolean(success)} id="register-submit">

@@ -1,18 +1,21 @@
 import { useState } from "react";
-import { CheckCircle2, MapPin, PackageOpen, Search, Trash2, Truck } from "lucide-react";
+import { CheckCircle2, MapPin, PackageOpen, Search, Trash2, Truck, XCircle } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { CATEGORIES } from "../data/initialData";
+import { FORM_LIMITS, notifyLimitReached } from "../utils/formLimits";
 
 export default function AdminOrders() {
-  const { orders, ordersLoading, ordersError, branches, updateOrderStatus, archiveOrder, user } = useApp();
+  const { orders, ordersLoading, ordersError, branches, updateOrderStatus, cancelOrder, archiveOrder, user } = useApp();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [branchFilter, setBranchFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [notification, setNotification] = useState("");
 
   const statusLabels = {
     pendiente: "Pendiente",
     entregado: "Entregado",
+    cancelado: "Cancelado",
   };
 
   const notify = (message) => {
@@ -21,9 +24,10 @@ export default function AdminOrders() {
   };
 
   const filteredOrders = orders.filter((order) => {
-    if (order.archivado || order.estado === "archivado" || order.status === "archivado") return false;
+    const orderStatus = order.estado || order.status || "pendiente";
+    if (order.archivado || orderStatus === "archivado" || orderStatus === "cancelado/archivado") return false;
     const term = search.toLowerCase();
-    const orderProducts = order.items || order.productos || [];
+    const orderProducts = order.productos || order.items || [];
     const orderBranch = order.sucursal || order.branchName || "";
     const matchesClient =
       !term ||
@@ -34,13 +38,14 @@ export default function AdminOrders() {
     const matchesCategory =
       !categoryFilter ||
       orderProducts.some((item) => {
-        const itemCategory = String(item.category || item.categoria || "");
+        const itemCategory = String(item.categoria || item.category || "Sin categoría");
         const selectedCategory = CATEGORIES.find((category) => category.id === categoryFilter);
         return itemCategory === categoryFilter || itemCategory === selectedCategory?.label;
       });
     const matchesBranch = !branchFilter || orderBranch === branchFilter;
+    const matchesStatus = !statusFilter || orderStatus === statusFilter;
 
-    return matchesClient && matchesCategory && matchesBranch;
+    return matchesClient && matchesCategory && matchesBranch && matchesStatus;
   });
 
   const branchOptions = Array.from(new Set([
@@ -54,6 +59,7 @@ export default function AdminOrders() {
     setSearch("");
     setCategoryFilter("");
     setBranchFilter("");
+    setStatusFilter("");
   };
 
   const markAsDelivered = async (orderId) => {
@@ -61,7 +67,18 @@ export default function AdminOrders() {
     notify(result.message);
   };
 
+  const cancelSelectedOrder = async (orderId) => {
+    if (!window.confirm("¿Seguro que deseas cancelar este pedido? El stock será devuelto.")) {
+      return;
+    }
+    const result = await cancelOrder(orderId);
+    notify(result.message);
+  };
+
   const discardOrder = async (orderId) => {
+    if (!window.confirm("¿Seguro que deseas archivar este pedido? Ya no aparecerá en el panel.")) {
+      return;
+    }
     const result = await archiveOrder(orderId);
     notify(result.message);
   };
@@ -95,9 +112,12 @@ export default function AdminOrders() {
             <Search aria-hidden="true" />
             <input
               type="search"
-              maxLength={100}
+              maxLength={FORM_LIMITS.text}
               value={search}
-              onChange={(event) => setSearch(event.target.value.slice(0, 100))}
+              onChange={(event) => {
+                notifyLimitReached({ fieldName: "text", value: event.target.value, limit: FORM_LIMITS.text, notify });
+                setSearch(event.target.value.slice(0, FORM_LIMITS.text));
+              }}
               placeholder="Nombre o correo"
             />
           </div>
@@ -120,7 +140,16 @@ export default function AdminOrders() {
             ))}
           </select>
         </label>
-        {(search || categoryFilter || branchFilter) && (
+        <label className="admin-filter-select">
+          <span>Estado</span>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <option value="">Todos</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="entregado">Entregados</option>
+            <option value="cancelado">Cancelados</option>
+          </select>
+        </label>
+        {(search || categoryFilter || branchFilter || statusFilter) && (
           <button type="button" className="btn-outline admin-filter-clear" onClick={clearFilters}>
             Limpiar filtros
           </button>
@@ -148,8 +177,11 @@ export default function AdminOrders() {
           {filteredOrders.map((order) => {
             const branch = branches.find((item) => item.id == order.branchId);
             const pickupBranch = order.sucursal || branch?.name || "No especificada";
-            const delivered = order.status === "entregado";
-            const statusLabel = statusLabels[order.status] || order.status;
+            const orderStatus = order.estado || order.status || "pendiente";
+            const delivered = orderStatus === "entregado";
+            const cancelled = orderStatus === "cancelado";
+            const pending = orderStatus === "pendiente";
+            const statusLabel = statusLabels[orderStatus] || orderStatus;
 
             return (
               <article className="admin-order-card" key={order.id}>
@@ -160,13 +192,18 @@ export default function AdminOrders() {
                     <time>{order.date}</time>
                   </div>
                   <div className="admin-order-actions">
-                    <span className={`admin-order-status ${delivered ? "is-delivered" : ""}`}>
-                      {delivered ? <CheckCircle2 /> : <Truck />}
+                    <span className={`admin-order-status ${delivered ? "is-delivered" : ""} ${cancelled ? "is-cancelled" : ""}`}>
+                      {delivered ? <CheckCircle2 /> : cancelled ? <XCircle /> : <Truck />}
                       {statusLabel}
                     </span>
-                    {!delivered && (
+                    {pending && (
                       <button className="btn-primary admin-order-complete" onClick={() => markAsDelivered(order.id)}>
                         <CheckCircle2 /> Marcar como entregado
+                      </button>
+                    )}
+                    {pending && (
+                      <button className="btn-outline admin-order-cancel" onClick={() => cancelSelectedOrder(order.id)}>
+                        <XCircle /> Cancelar pedido
                       </button>
                     )}
                     <button

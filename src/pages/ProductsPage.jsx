@@ -19,6 +19,7 @@ import { useApp } from "../context/AppContext";
 import { CATEGORIES } from "../data/initialData";
 import ProductCard from "../components/ProductCard";
 import Breadcrumbs from "../components/Breadcrumbs";
+import { FORM_LIMITS, notifyLimitReached } from "../utils/formLimits";
 
 const categoryIcons = {
   analgesia: Pill,
@@ -37,6 +38,7 @@ export default function ProductsPage() {
   const { products, productsLoading, productsError } = useApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
+  const [limitMessage, setLimitMessage] = useState("");
 
   const activeCategory = searchParams.get("cat") || null;
   const activeFeatured = searchParams.get("featured") === "true";
@@ -61,6 +63,7 @@ export default function ProductsPage() {
 
   const clearFilters = () => {
     setSearch("");
+    setLimitMessage("");
     setSearchParams({});
   };
 
@@ -149,9 +152,12 @@ export default function ProductsPage() {
               <Search className="products-search-icon" aria-hidden="true" />
               <input
                 type="text"
-                maxLength={100}
+                maxLength={FORM_LIMITS.text}
                 value={search}
-                onChange={(e) => setSearch(e.target.value.slice(0, 100))}
+                onChange={(e) => {
+                  notifyLimitReached({ fieldName: "text", value: e.target.value, limit: FORM_LIMITS.text, notify: setLimitMessage });
+                  setSearch(e.target.value.slice(0, FORM_LIMITS.text));
+                }}
                 placeholder="Buscar productos o marcas..."
                 className="products-search-input"
                 id="product-search"
@@ -172,6 +178,8 @@ export default function ProductsPage() {
               </button>
             )}
           </div>
+
+          {limitMessage && <div className="notification" role="status">{limitMessage}</div>}
 
           <div className="products-grid-header">
             <div>

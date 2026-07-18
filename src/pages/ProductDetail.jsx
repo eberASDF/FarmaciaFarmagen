@@ -3,13 +3,13 @@ import { useState } from "react";
 import { useApp } from "../context/AppContext";
 import { CATEGORIES } from "../data/initialData";
 import Breadcrumbs from "../components/Breadcrumbs";
+import { FORM_LIMITS } from "../utils/formLimits";
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { products, productsLoading, productsError, addToCart } = useApp();
   const [quantity, setQuantity] = useState(1);
-  const [showNotification, setShowNotification] = useState(false);
 
   const product = products.find(p => String(p.id) === String(id));
 
@@ -51,30 +51,23 @@ export default function ProductDetail() {
   const imageSrc = product.image || product.imagenUrl || product.imageUrl || "";
   const price = Number(product.price || product.precio || 0);
   const stock = Math.max(0, Number(product.stock || 0));
+  const maxQuantity = Math.min(stock, FORM_LIMITS.numberMax);
   const isOutOfStock = stock <= 0;
 
   const handleAdd = () => {
     if (isOutOfStock) return;
     addToCart(product, quantity);
-    setShowNotification(true);
-    setTimeout(() => setShowNotification(false), 3000);
   };
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
-    addToCart(product, quantity);
-    navigate("/checkout");
+    const result = addToCart(product, quantity);
+    if (result.success) navigate("/checkout");
   };
 
   return (
     <div className="page-container product-detail-page">
       <Breadcrumbs extra={product.name} />
-
-      {showNotification && (
-        <div className="notification notification--success">
-          {quantity} unidad(es) de {product.name} anadida(s) al carrito
-        </div>
-      )}
 
       <section className="product-detail">
         <div className="product-detail-img-wrap">
@@ -107,7 +100,7 @@ export default function ProductDetail() {
             <div className="product-detail-qty">
               <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="qty-btn">-</button>
               <span className="qty-value">{quantity}</span>
-              <button onClick={() => setQuantity(Math.min(stock, quantity + 1))} className="qty-btn" disabled={isOutOfStock}>+</button>
+              <button onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))} className="qty-btn" disabled={isOutOfStock || quantity >= maxQuantity}>+</button>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
@@ -22,6 +22,7 @@ import {
 } from "firebase/firestore";
 import { initialProducts, initialBranches, initialBanners } from "../data/initialData";
 import { auth, db } from "../firebase/config";
+import { FORM_LIMITS } from "../utils/formLimits";
 
 const AppContext = createContext(null);
 // Cambia esta URL por el dominio real en produccion si no quieres usar el origen actual.
@@ -138,11 +139,19 @@ function buildBranchFirestorePayload(branch) {
   };
 }
 
-const ORDER_STATUSES = ["pendiente", "entregado", "archivado"];
+const ORDER_STATUSES = ["pendiente", "entregado", "cancelado", "archivado", "cancelado/archivado"];
+const MAX_ORDER_UNITS = 20;
+const RECENT_CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
+const CANCEL_ORDER_BLOCK_MS = 60 * 60 * 1000;
+const MAX_ORDER_UNITS_MESSAGE = "Tu pedido no puede superar 20 unidades en total.";
+const PENDING_ORDER_MESSAGE = "Ya tienes un pedido pendiente. Espera a que sea entregado o cancelado antes de crear otro.";
+const RECENT_CANCEL_BLOCK_MESSAGE = "No puedes crear más pedidos por ahora debido a varios pedidos cancelados recientemente. Intenta de nuevo en 1 hora.";
 const LEGACY_ORDER_STATUS = {
   Confirmado: "pendiente",
   Entregado: "entregado",
   Pendiente: "pendiente",
+  Cancelado: "cancelado",
+  Archivado: "archivado",
 };
 
 function formatOrderDate(value) {
@@ -151,12 +160,30 @@ function formatOrderDate(value) {
   return date.toLocaleDateString("es-MX");
 }
 
+function getTimestampMillis(value) {
+  if (!value) return 0;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value.toDate === "function") return value.toDate().getTime();
+  if (typeof value === "number") return value;
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function getCartUnits(items) {
+  return items.reduce((total, item) => total + Math.max(0, Number(item.quantity ?? item.cantidad ?? 0)), 0);
+}
+
+function getOrderActivityMillis(order) {
+  return Math.max(getTimestampMillis(order.creadoEn), getTimestampMillis(order.actualizadoEn));
+}
+
 function normalizeOrderProduct(item) {
   const cantidad = Number(item.cantidad ?? item.quantity ?? 1);
   const precio = Number(item.precio ?? item.price ?? 0);
   const nombre = item.nombre || item.name || "";
   const imagenUrl = item.imagenUrl || item.imageUrl || item.image || "";
-  const categoria = item.categoria || item.category || "";
+  const categoria = item.categoria || item.category || "Sin categoría";
 
   return {
     id: item.id,
@@ -196,7 +223,8 @@ function normalizeOrder(order, docId = order.id) {
     deliveryMethod: tipoEntrega,
     estado,
     status: estado,
-    archivado: Boolean(order.archivado) || estado === "archivado",
+    archivado: Boolean(order.archivado) || estado === "archivado" || estado === "cancelado/archivado",
+    stockDevuelto: Boolean(order.stockDevuelto),
     branchId: order.branchId || order.sucursalId || null,
     user: order.clienteCorreo || order.user || "invitado",
     userName: order.clienteNombre || order.userName || "Invitado",
@@ -208,7 +236,7 @@ function normalizeOrder(order, docId = order.id) {
 
 function normalizeProduct(product, docId = product.id) {
   const nombre = product.nombre || product.name || "";
-  const categoria = product.categoria || product.category || "";
+  const categoria = product.categoria || product.category || "Sin categoría";
   const precio = Number(product.precio ?? product.price ?? 0);
   const stock = Math.max(0, Number(product.stock ?? 0));
   const imagenUrl = product.imagenUrl || product.imageUrl || product.image || "";
@@ -309,6 +337,9 @@ export function AppProvider({ children }) {
     return storedUser?.uid ? storedUser : null;
   });
   const [cart, setCart] = useState(() => loadFromStorage("fd_cart", []));
+  const [cartNotifications, setCartNotifications] = useState([]);
+  const cartNotificationTimers = useRef({});
+  const cartNotificationId = useRef(0);
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState("");
@@ -456,6 +487,10 @@ export function AppProvider({ children }) {
   useEffect(() => { saveToStorage("fd_cart", cart); }, [cart]);
   useEffect(() => { saveToStorage("fd_registered_users", registeredUsers); }, [registeredUsers]);
 
+  useEffect(() => () => {
+    Object.values(cartNotificationTimers.current).forEach((timerId) => window.clearTimeout(timerId));
+  }, []);
+
   // ── Autenticación ──────────────────────────────────────────────────────────
   const login = (email, password) => {
     const found = registeredUsers.find(u => u.email === email && u.password === password);
@@ -512,7 +547,7 @@ export function AppProvider({ children }) {
     } catch (error) {
       console.error("Error iniciando sesion:", error);
       if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
-        return { success: false, message: "Correo o contrasena incorrectos." };
+        return { success: false, invalidCredentials: true, message: "Correo o contrasena incorrectos." };
       }
       return { success: false, message: "No se pudo iniciar sesion. Intentalo de nuevo." };
     }
@@ -570,7 +605,7 @@ export function AppProvider({ children }) {
     } catch (error) {
       console.error("Error iniciando sesion admin:", error);
       if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
-        return { success: false, message: "Credenciales de administrador incorrectas." };
+        return { success: false, invalidCredentials: true, message: "Credenciales de administrador incorrectas." };
       }
       if (error.code === "permission-denied" || error.message?.includes("Missing or insufficient permissions")) {
         return { success: false, message: "Firebase bloqueo el acceso por permisos. Revisa las reglas de Firestore para usuarios." };
@@ -586,6 +621,7 @@ export function AppProvider({ children }) {
 
     if (!nombre) return { success: false, message: "Ingresa tu nombre completo." };
     if (!correo) return { success: false, message: "Ingresa tu correo electronico." };
+    if (telefono.length > FORM_LIMITS.phone) return { success: false, message: "El teléfono no puede superar 20 caracteres." };
     if (!userData.password || userData.password.length < 6) {
       return { success: false, message: "La contrasena debe tener al menos 6 caracteres." };
     }
@@ -689,7 +725,7 @@ export function AppProvider({ children }) {
     const nombre = (updatedData.name || "").trim();
     const telefono = (updatedData.phone || "").trim();
 
-    if (nombre.length > 50 || telefono.length > 100) {
+    if (nombre.length > FORM_LIMITS.name || telefono.length > FORM_LIMITS.phone) {
       return { success: false, message: "Error al actualizar perfil" };
     }
 
@@ -717,12 +753,58 @@ export function AppProvider({ children }) {
   };
 
   // ── Carrito ────────────────────────────────────────────────────────────────
+  const dismissCartNotification = (id) => {
+    if (cartNotificationTimers.current[id]) {
+      window.clearTimeout(cartNotificationTimers.current[id]);
+    }
+
+    setCartNotifications(prev => prev.map(notification =>
+      notification.id === id ? { ...notification, leaving: true } : notification
+    ));
+
+    cartNotificationTimers.current[id] = window.setTimeout(() => {
+      setCartNotifications(prev => prev.filter(notification => notification.id !== id));
+      delete cartNotificationTimers.current[id];
+    }, 220);
+  };
+
+  const showCartNotification = (message, type = "success") => {
+    const id = `${Date.now()}-${cartNotificationId.current += 1}`;
+    const notification = {
+      id,
+      message,
+      type,
+      action: type === "success" ? "open-cart" : null,
+      leaving: false,
+    };
+
+    setCartNotifications(prev => [...prev.filter(item => !item.leaving).slice(-3), notification]);
+    cartNotificationTimers.current[id] = window.setTimeout(() => dismissCartNotification(id), 3000);
+  };
+
   const addToCart = (product, quantity = 1) => {
     const stock = Math.max(0, Number(product.stock ?? 0));
-    if (stock <= 0) return { success: false, message: "Producto agotado" };
+    if (stock <= 0) {
+      showCartNotification("Ya no hay más unidades para agregar", "error");
+      return { success: false, message: "Producto agotado" };
+    }
 
     const safeQuantity = Math.min(stock, 9999, Math.max(1, Number(quantity) || 1));
     const cartProduct = normalizeProduct(product);
+    const existingCartItem = cart.find(item => String(item.id) === String(product.id));
+    const currentQuantity = Number(existingCartItem?.quantity ?? existingCartItem?.cantidad ?? 0);
+    const currentCartUnits = getCartUnits(cart);
+
+    if (currentQuantity >= stock || currentQuantity + safeQuantity > stock) {
+      showCartNotification("Ya no hay más unidades para agregar", "error");
+      return { success: false, message: "Ya no hay más unidades para agregar" };
+    }
+
+    if (currentCartUnits + safeQuantity > MAX_ORDER_UNITS) {
+      showCartNotification(MAX_ORDER_UNITS_MESSAGE, "error");
+      return { success: false, message: MAX_ORDER_UNITS_MESSAGE };
+    }
+
     const cartItem = {
       id: cartProduct.id,
       nombre: cartProduct.nombre,
@@ -732,18 +814,22 @@ export function AppProvider({ children }) {
       imagenUrl: cartProduct.imagenUrl,
       imageUrl: cartProduct.imageUrl,
       image: cartProduct.image,
+      categoria: cartProduct.categoria || "Sin categoría",
+      category: cartProduct.category || cartProduct.categoria || "Sin categoría",
       stock: cartProduct.stock,
       cantidad: safeQuantity,
       quantity: safeQuantity,
     };
 
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+      const existing = prev.find(item => String(item.id) === String(product.id));
       if (existing) {
         return prev.map(item =>
-          item.id === product.id
+          String(item.id) === String(product.id)
             ? {
                 ...item,
+                categoria: item.categoria || cartProduct.categoria || "Sin categoría",
+                category: item.category || cartProduct.category || cartProduct.categoria || "Sin categoría",
                 quantity: Math.min(stock, 9999, item.quantity + safeQuantity),
                 cantidad: Math.min(stock, 9999, item.quantity + safeQuantity),
               }
@@ -752,14 +838,30 @@ export function AppProvider({ children }) {
       }
       return [...prev, cartItem];
     });
+    showCartNotification(`${cartProduct.name} añadido al carrito`);
     return { success: true };
   };
 
   const removeFromCart = (id) => setCart(prev => prev.filter(item => item.id !== id));
   const updateCartQuantity = (id, quantity) => {
     if (quantity <= 0) return removeFromCart(id);
+    const targetItem = cart.find(item => String(item.id) === String(id));
+    const targetMaxQuantity = Math.min(9999, Math.max(1, Number(targetItem?.stock) || 9999));
+    if (Number(quantity) > targetMaxQuantity) {
+      showCartNotification("Ya no hay más unidades para agregar", "error");
+    }
+
+    const currentQuantity = Number(targetItem?.quantity ?? targetItem?.cantidad ?? 0);
+    const nextQuantity = Math.min(targetMaxQuantity, Math.max(1, Number(quantity) || 1));
+    const nextCartUnits = getCartUnits(cart) - currentQuantity + nextQuantity;
+
+    if (nextCartUnits > MAX_ORDER_UNITS) {
+      showCartNotification(MAX_ORDER_UNITS_MESSAGE, "error");
+      return;
+    }
+
     setCart(prev => prev.map(item => {
-      if (item.id !== id) return item;
+      if (String(item.id) !== String(id)) return item;
       const maxQuantity = Math.min(9999, Math.max(1, Number(item.stock) || 9999));
       const nextQuantity = Math.min(maxQuantity, Math.max(1, Number(quantity) || 1));
       return { ...item, quantity: nextQuantity, cantidad: nextQuantity };
@@ -770,6 +872,45 @@ export function AppProvider({ children }) {
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   // ── Pedidos ────────────────────────────────────────────────────────────────
+  const validateOrderCreationRules = async () => {
+    if (getCartUnits(cart) > MAX_ORDER_UNITS) {
+      return { success: false, message: MAX_ORDER_UNITS_MESSAGE };
+    }
+
+    const userOrdersSnapshot = await getDocs(query(collection(db, "pedidos"), where("usuarioId", "==", user.uid)));
+    const userOrders = userOrdersSnapshot.docs.map((orderDoc) => orderDoc.data());
+    const now = Date.now();
+    const recentCutoff = now - RECENT_CANCEL_WINDOW_MS;
+
+    const hasPendingOrder = userOrders.some((order) => {
+      const status = LEGACY_ORDER_STATUS[order.estado || order.status] || order.estado || order.status || "pendiente";
+      const archived = Boolean(order.archivado) || status === "archivado" || status === "cancelado/archivado";
+      return status === "pendiente" && !archived;
+    });
+
+    if (hasPendingOrder) {
+      return { success: false, message: PENDING_ORDER_MESSAGE };
+    }
+
+    const recentCancelledOrders = userOrders.filter((order) => {
+      const status = LEGACY_ORDER_STATUS[order.estado || order.status] || order.estado || order.status || "";
+      if (status !== "cancelado" && status !== "cancelado/archivado") return false;
+
+      const createdAt = getTimestampMillis(order.creadoEn);
+      const updatedAt = getTimestampMillis(order.actualizadoEn);
+      return createdAt >= recentCutoff || updatedAt >= recentCutoff;
+    });
+
+    if (recentCancelledOrders.length >= 3) {
+      const lastCancelledAt = Math.max(...recentCancelledOrders.map(getOrderActivityMillis));
+      if (lastCancelledAt + CANCEL_ORDER_BLOCK_MS > now) {
+        return { success: false, message: RECENT_CANCEL_BLOCK_MESSAGE };
+      }
+    }
+
+    return { success: true };
+  };
+
   const placeOrder = async (sucursal) => {
     if (!user?.uid || !user?.emailVerified) {
       return { success: false, message: "Debes iniciar sesión para finalizar la compra." };
@@ -780,7 +921,22 @@ export function AppProvider({ children }) {
       return { success: false, message: "Selecciona una sucursal para recoger tu pedido." };
     }
 
-    const orderItems = cart.map(buildOrderProduct);
+    try {
+      const abuseValidation = await validateOrderCreationRules();
+      if (!abuseValidation.success) return abuseValidation;
+    } catch (error) {
+      console.error("Error validando reglas de pedido:", error);
+      return { success: false, message: "Error al crear el pedido" };
+    }
+
+    const orderItems = cart.map((item) => {
+      const catalogProduct = products.find((product) => String(product.id) === String(item.id));
+      return buildOrderProduct({
+        ...catalogProduct,
+        ...item,
+        categoria: item.categoria || item.category || catalogProduct?.categoria || catalogProduct?.category || "Sin categoría",
+      });
+    });
     const total = Number(cartTotal.toFixed(2));
     const orderRef = doc(collection(db, "pedidos"));
     const createdAt = new Date().toISOString();
@@ -870,17 +1026,130 @@ export function AppProvider({ children }) {
     }
   };
 
+  const cancelOrder = async (orderId) => {
+    if (user?.role !== "admin") {
+      return { success: false, message: "No tienes permisos para ver pedidos" };
+    }
+
+    try {
+      const orderRef = doc(db, "pedidos", String(orderId));
+      const result = await runTransaction(db, async (transaction) => {
+        const orderSnapshot = await transaction.get(orderRef);
+        if (!orderSnapshot.exists()) throw new Error("ORDER_NOT_FOUND");
+
+        const orderData = orderSnapshot.data();
+        const currentStatus = orderData.estado || orderData.status || "pendiente";
+
+        if (currentStatus === "cancelado" || currentStatus === "cancelado/archivado" || orderData.stockDevuelto) {
+          return { alreadyCancelled: true, restoredItems: [] };
+        }
+
+        if (currentStatus === "archivado" || orderData.archivado) {
+          return { archived: true, restoredItems: [] };
+        }
+
+        if (currentStatus === "entregado") {
+          return { delivered: true, restoredItems: [] };
+        }
+
+        const orderProducts = (orderData.productos || orderData.items || []).map(normalizeOrderProduct);
+
+        for (const item of orderProducts) {
+          if (!item.id) throw new Error("ORDER_PRODUCT_MISSING_ID");
+        }
+
+        const productReads = [];
+        for (const item of orderProducts) {
+          const productRef = doc(db, "productos", String(item.id));
+          const productSnapshot = await transaction.get(productRef);
+          productReads.push({ item, productRef, productSnapshot });
+        }
+
+        for (const { productSnapshot } of productReads) {
+          if (!productSnapshot.exists()) throw new Error("ORDER_PRODUCT_NOT_FOUND");
+        }
+
+        const restoredItems = [];
+        for (const { item, productRef, productSnapshot } of productReads) {
+          const quantity = Number(item.cantidad || item.quantity || 0);
+          const currentStock = Number(productSnapshot.data().stock || 0);
+          transaction.update(productRef, {
+            stock: currentStock + quantity,
+            actualizadoEn: serverTimestamp(),
+          });
+          restoredItems.push({ id: item.id, cantidad: quantity });
+        }
+
+        transaction.update(orderRef, {
+          estado: "cancelado",
+          stockDevuelto: true,
+          actualizadoEn: serverTimestamp(),
+        });
+
+        return { restoredItems };
+      });
+
+      if (result.alreadyCancelled) {
+        return { success: false, message: "El pedido ya esta cancelado" };
+      }
+
+      if (result.archived) {
+        return { success: false, message: "No se puede cancelar un pedido archivado" };
+      }
+
+      if (result.delivered) {
+        return { success: false, message: "No se puede cancelar un pedido entregado" };
+      }
+
+      setProducts(prev => prev.map(product => {
+        const restored = result.restoredItems.find(item => String(item.id) === String(product.id));
+        return restored
+          ? { ...product, stock: Number(product.stock || 0) + restored.cantidad }
+          : product;
+      }));
+
+      setOrders(prev => prev.map(order => String(order.id) === String(orderId)
+        ? { ...order, estado: "cancelado", status: "cancelado", stockDevuelto: true }
+        : order
+      ));
+
+      return { success: true, message: "Pedido cancelado correctamente" };
+    } catch (error) {
+      console.error("Error cancelando pedido:", error);
+      if (error.message === "ORDER_PRODUCT_MISSING_ID") {
+        return { success: false, message: "Producto del pedido sin id, no se puede devolver stock" };
+      }
+      if (error.message === "ORDER_PRODUCT_NOT_FOUND") {
+        return { success: false, message: "Un producto del pedido ya no existe en Firestore, no se puede cancelar el pedido" };
+      }
+      return { success: false, message: "Error al cancelar pedido" };
+    }
+  };
+
   const archiveOrder = async (orderId) => {
     if (user?.role !== "admin") {
       return { success: false, message: "No tienes permisos para ver pedidos" };
     }
 
     try {
-      await updateDoc(doc(db, "pedidos", String(orderId)), {
-        estado: "archivado",
-        archivado: true,
-        actualizadoEn: serverTimestamp(),
+      const orderRef = doc(db, "pedidos", String(orderId));
+      await runTransaction(db, async (transaction) => {
+        const orderSnapshot = await transaction.get(orderRef);
+        if (!orderSnapshot.exists()) throw new Error("ORDER_NOT_FOUND");
+
+        const orderData = orderSnapshot.data();
+        const currentStatus = orderData.estado || orderData.status || "pendiente";
+        const nextStatus = currentStatus === "cancelado" || currentStatus === "cancelado/archivado"
+          ? "cancelado/archivado"
+          : "archivado";
+
+        transaction.update(orderRef, {
+          estado: nextStatus,
+          archivado: true,
+          actualizadoEn: serverTimestamp(),
+        });
       });
+
       setOrders(prev => prev.filter(o => String(o.id) !== String(orderId)));
       return { success: true, message: "Pedido archivado correctamente" };
     } catch (error) {
@@ -1116,7 +1385,7 @@ export function AppProvider({ children }) {
 
   const value = {
     // Data
-    products, productsLoading, productsError, branches, banners, user, cart, orders, ordersLoading, ordersError, registeredUsers,
+    products, productsLoading, productsError, branches, banners, user, cart, cartNotifications, orders, ordersLoading, ordersError, registeredUsers,
     // Computed
     cartTotal, cartCount,
     featuredProducts,
@@ -1124,12 +1393,12 @@ export function AppProvider({ children }) {
     // Auth
     login, loginUser, loginAdmin, register, resendVerificationEmail, logout, loadUserProfile, updateProfile,
     // Cart
-    addToCart, removeFromCart, updateCartQuantity, clearCart,
+    addToCart, removeFromCart, updateCartQuantity, clearCart, dismissCartNotification,
     // Orders
     placeOrder,
     // Admin
     updateOrderStatus,
-    archiveOrder, deleteOrder,
+    cancelOrder, archiveOrder, deleteOrder,
     addProduct, updateProduct, deleteProduct, toggleFeatured,
     addBranch, updateBranch, deleteBranch, toggleBranch,
     addBanner, updateBanner, deleteBanner, toggleBanner,

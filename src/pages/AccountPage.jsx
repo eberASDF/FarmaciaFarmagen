@@ -3,6 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { downloadPickupTicket } from "../utils/orderTicket";
+import { FORM_LIMITS, getLimitMessage, notifyLimitReached } from "../utils/formLimits";
 
 export default function AccountPage() {
   const { user, loadUserProfile, updateProfile, orders, branches } = useApp();
@@ -44,18 +45,33 @@ export default function AccountPage() {
   const statusLabels = {
     pendiente: "Pendiente",
     entregado: "Entregado",
+    cancelado: "Cancelado",
     archivado: "Archivado",
+    "cancelado/archivado": "Cancelado y archivado",
   };
 
   const handleChange = (e) => {
-    const limit = e.target.name === "name" ? 50 : 100;
-    if (e.target.value.length > limit) return;
+    const limit = e.target.name === "name" ? FORM_LIMITS.name : FORM_LIMITS.phone;
+    if (e.target.value.length > limit) {
+      setMessageType("error");
+      setMessage(getLimitMessage(e.target.name, limit));
+      return;
+    }
+    notifyLimitReached({
+      fieldName: e.target.name,
+      value: e.target.value,
+      limit,
+      notify: (text) => {
+        setMessageType("error");
+        setMessage(text);
+      },
+    });
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if ((form.name || "").length > 50 || (form.phone || "").length > 100) return;
+    if ((form.name || "").length > FORM_LIMITS.name || (form.phone || "").length > FORM_LIMITS.phone) return;
     setSavingProfile(true);
     const result = await updateProfile(form);
     setSavingProfile(false);
@@ -67,6 +83,8 @@ export default function AccountPage() {
 
   const userOrders = orders.filter(o => o.usuarioId === user.uid && !o.archivado && o.status !== "archivado");
   const handleDownloadTicket = (order) => {
+    const orderStatus = order.estado || order.status || "pendiente";
+    if (orderStatus !== "pendiente") return;
     downloadPickupTicket(order, branches);
   };
 
@@ -106,11 +124,11 @@ export default function AccountPage() {
             <form onSubmit={handleSave} className="auth-form">
               <div className="form-group">
                 <label className="form-label">Nombre</label>
-                <input type="text" name="name" maxLength={50} value={form.name || ""} onChange={handleChange} className="form-input" />
+                <input type="text" name="name" maxLength={FORM_LIMITS.name} value={form.name || ""} onChange={handleChange} className="form-input" />
               </div>
               <div className="form-group">
                 <label className="form-label">Telefono</label>
-                <input type="tel" name="phone" maxLength={100} pattern="[0-9\s()+]*" value={form.phone || ""} onChange={handleChange} className="form-input" />
+                <input type="tel" name="phone" maxLength={FORM_LIMITS.phone} pattern="[0-9\s()+]*" value={form.phone || ""} onChange={handleChange} className="form-input" />
               </div>
               <button type="submit" className="btn-primary-lg btn-full" id="save-profile" disabled={savingProfile}>
                 {savingProfile ? "Guardando..." : "Guardar Cambios"}
@@ -140,11 +158,15 @@ export default function AccountPage() {
             <p className="account-empty">Aun no tienes pedidos realizados.</p>
           ) : (
             <div className="orders-list">
-              {userOrders.map(order => (
+              {userOrders.map(order => {
+                const orderStatus = order.estado || order.status || "pendiente";
+                const canDownloadTicket = orderStatus === "pendiente";
+
+                return (
                 <div key={order.id} className="order-item">
                   <div className="order-item-header">
                     <span className="order-item-id">Pedido #{order.id}</span>
-                    <span className="order-item-status">{statusLabels[order.status] || order.status}</span>
+                    <span className="order-item-status">{statusLabels[orderStatus] || orderStatus}</span>
                   </div>
                   <div className="order-item-details">
                     <span>{order.date}</span>
@@ -152,7 +174,7 @@ export default function AccountPage() {
                     <span className="order-item-total">${order.total.toFixed(2)}</span>
                   </div>
                   <div className="order-item-delivery">Recoger en sucursal</div>
-                  {order.status !== "entregado" && (
+                  {canDownloadTicket && (
                     <button
                       type="button"
                       className="order-ticket-btn"
@@ -162,7 +184,8 @@ export default function AccountPage() {
                     </button>
                   )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>

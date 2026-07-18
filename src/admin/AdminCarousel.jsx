@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useApp } from "../context/AppContext";
-import { storage } from "../firebase/config";
+import { subirImagenACloudinary, validarImagenCloudinary } from "../services/cloudinaryService";
+import { notifyLimitReached } from "../utils/formLimits";
 
 export default function AdminCarousel() {
   const { banners, addBanner, updateBanner, deleteBanner, toggleBanner } = useApp();
   const [showModal, setShowModal] = useState(false);
   const [editingBanner, setEditingBanner] = useState(null);
   const [notification, setNotification] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const emptyForm = { title: "", subtitle: "", image: "", imageFile: null, ctaText: "", ctaLink: "" };
   const [form, setForm] = useState(emptyForm);
@@ -46,55 +47,66 @@ export default function AdminCarousel() {
       showNotif(form.title.length > 50 ? "El nombre no puede superar 50 caracteres" : form.subtitle.length > 300 ? "La descripciÃ³n no puede superar 300 caracteres" : "Este campo no puede superar 100 caracteres");
       return;
     }
-    let imageUrl = "";
+    setSaving(true);
     try {
-      imageUrl = await uploadBannerImage();
+      const imageUrl = await uploadBannerImage();
+      const payload = { ...form, image: imageUrl, imagenUrl: imageUrl };
+      const result = editingBanner
+        ? await updateBanner(editingBanner.id, payload)
+        : await addBanner(payload);
+
+      showNotif(result.message);
+      if (result.success) {
+        setShowModal(false);
+        setForm(emptyForm);
+      }
     } catch (error) {
-      showNotif(error.message === "Error al subir la imagen" ? "Error al subir la imagen" : "Error al guardar el banner");
-      return;
+      console.error("Error guardando banner desde admin:", error);
+      showNotif(error.message || "Error al guardar el banner");
+    } finally {
+      setSaving(false);
     }
-
-    const payload = { ...form, image: imageUrl, imagenUrl: imageUrl };
-
-    if (editingBanner) {
-      const result = await updateBanner(editingBanner.id, payload);
-      showNotif(result.message);
-      if (!result.success) return;
-    } else {
-      const result = await addBanner(payload);
-      showNotif(result.message);
-      if (!result.success) return;
-    }
-    setShowModal(false);
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const limit = name === "title" ? 50 : name === "subtitle" ? 300 : 100;
+    const limit = name === "title" ? 50 : name === "subtitle" ? 300 : name === "image" ? 500 : 100;
     if (value.length > limit) {
+      if (name === "image") {
+        showNotif("La URL de imagen no puede superar 500 caracteres");
+        return;
+      }
       showNotif(name === "title" ? "El nombre no puede superar 50 caracteres" : name === "subtitle" ? "La descripciÃ³n no puede superar 300 caracteres" : "Este campo no puede superar 100 caracteres");
       return;
     }
+    notifyLimitReached({ fieldName: name, value, limit, notify: showNotif });
     setForm(prev => ({ ...prev, [name]: value, ...(name === "image" ? { imageFile: null } : {}) }));
   };
 
   const uploadBannerImage = async () => {
-    if (!form.imageFile) return form.image.trim();
+    if (!form.imageFile) {
+      const imageUrl = form.image.trim();
+      return imageUrl.startsWith("data:") || imageUrl.startsWith("blob:") ? "" : imageUrl;
+    }
 
     try {
-      const safeName = form.imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const imageRef = ref(storage, `banners/${Date.now()}-${safeName}`);
-      const snapshot = await uploadBytes(imageRef, form.imageFile);
-      return await getDownloadURL(snapshot.ref);
+      return await subirImagenACloudinary(form.imageFile, "farmagen/banners");
     } catch (error) {
       console.error("Error subiendo imagen de banner:", error);
-      throw new Error("Error al subir la imagen");
+      throw new Error(error.message || "Error al subir la imagen");
     }
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      try {
+        validarImagenCloudinary(file);
+      } catch (error) {
+        showNotif(error.message);
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setForm(prev => ({ ...prev, image: reader.result, imageFile: file }));
@@ -186,12 +198,12 @@ export default function AdminCarousel() {
               
               <div className="form-group">
                 <label className="form-label">Cargar Imagen de Banner</label>
-                <input type="file" accept="image/*" onChange={handleFileChange} className="form-input" style={{ color: '#94a3b8' }} />
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="form-input" style={{ color: '#94a3b8' }} />
               </div>
 
               <div className="form-group">
                 <label className="form-label">O escribir URL de Imagen</label>
-                <input type="url" name="image" maxLength={100} value={form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
+                <input type="url" name="image" maxLength={500} value={form.imageFile ? "" : form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
               </div>
 
               {form.image && (
@@ -231,7 +243,7 @@ export default function AdminCarousel() {
               </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-outline">Cancelar</button>
-                <button type="submit" className="btn-primary" id="save-banner-btn">{editingBanner ? "Guardar Cambios" : "Agregar Banner"}</button>
+                <button type="submit" className="btn-primary" id="save-banner-btn" disabled={saving}>{saving ? "Guardando..." : editingBanner ? "Guardar Cambios" : "Agregar Banner"}</button>
               </div>
             </form>
           </div>

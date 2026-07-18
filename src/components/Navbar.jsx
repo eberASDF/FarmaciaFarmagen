@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import logoFarmaGen from "../assets/logo.jpg";
+import { FORM_LIMITS, notifyLimitReached } from "../utils/formLimits";
 
 export default function Navbar({ onOpenCart }) {
   const { user, logout, cartCount, products, productsLoading } = useApp();
@@ -24,6 +25,7 @@ export default function Navbar({ onOpenCart }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLimitMessage, setSearchLimitMessage] = useState("");
   const searchRef = useRef(null);
   const isHome = location.pathname === "/" || location.pathname === "/home";
 
@@ -53,11 +55,13 @@ export default function Navbar({ onOpenCart }) {
     navigate(`/products/${searchResults[0].id}`);
     setSearch("");
     setSearchOpen(false);
+    setSearchLimitMessage("");
   };
 
   const closeSearch = () => {
     setSearch("");
     setSearchOpen(false);
+    setSearchLimitMessage("");
   };
 
   const handleCartOpen = () => {
@@ -96,14 +100,19 @@ export default function Navbar({ onOpenCart }) {
           <Search className="navbar-search-icon" size={22} aria-hidden="true" />
           <input
             type="search"
-            maxLength={100}
+            maxLength={FORM_LIMITS.text}
             placeholder="Buscar medicamentos y productos"
             aria-label="Buscar productos"
             aria-expanded={searchOpen && search.trim().length > 0}
             aria-controls="navbar-search-results"
             value={search}
             onChange={(event) => {
-              setSearch(event.target.value.slice(0, 100));
+              if (event.target.value.length >= FORM_LIMITS.text) {
+                notifyLimitReached({ fieldName: "text", value: event.target.value, limit: FORM_LIMITS.text, notify: setSearchLimitMessage });
+              } else {
+                setSearchLimitMessage("");
+              }
+              setSearch(event.target.value.slice(0, FORM_LIMITS.text));
               setSearchOpen(true);
             }}
             onFocus={() => search.trim() && setSearchOpen(true)}
@@ -112,6 +121,7 @@ export default function Navbar({ onOpenCart }) {
             }}
           />
           {search && <button type="button" className="navbar-search-clear" onClick={closeSearch} aria-label="Limpiar búsqueda"><X aria-hidden="true" /></button>}
+          {searchLimitMessage && <span className="navbar-search-limit" role="status">{searchLimitMessage}</span>}
 
           {searchOpen && search.trim() && (
             <div className="navbar-search-results" id="navbar-search-results" role="listbox">

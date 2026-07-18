@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { Edit3, PackagePlus, Star, Trash2, X } from "lucide-react";
-import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useApp } from "../context/AppContext";
 import { CATEGORIES } from "../data/initialData";
-import { storage } from "../firebase/config";
+import { subirImagenACloudinary, validarImagenCloudinary } from "../services/cloudinaryService";
+import { notifyLimitReached } from "../utils/formLimits";
 
 const PRODUCT_LIMITS = {
   name: 50,
   description: 300,
   text: 100,
+  imageUrl: 500,
   priceMax: 9999,
   stockMax: 9999,
 };
@@ -68,7 +69,7 @@ export default function AdminProducts() {
     if (!name || !category || form.price === "" || form.stock === "") return "Falta completar campos obligatorios";
     if (name.length > PRODUCT_LIMITS.name) return "El nombre no puede superar 50 caracteres";
     if (description.length > PRODUCT_LIMITS.description) return "La descripciÃ³n no puede superar 300 caracteres";
-    if (!form.imageFile && image.length > PRODUCT_LIMITS.text) return "Este campo no puede superar 100 caracteres";
+    if (!form.imageFile && image.length > PRODUCT_LIMITS.imageUrl) return "La URL de imagen no puede superar 500 caracteres";
     if (Number.isNaN(price) || price <= 0) return "El precio debe ser mayor a 0";
     if (price > PRODUCT_LIMITS.priceMax) return "El precio no puede ser mayor a 9999";
     if (!Number.isInteger(stock)) return "El stock debe ser un nÃºmero entero";
@@ -78,27 +79,16 @@ export default function AdminProducts() {
   };
 
   const uploadProductImage = async () => {
-    if (!form.imageFile) return form.image.trim();
+    if (!form.imageFile) {
+      const imageUrl = form.image.trim();
+      return imageUrl.startsWith("data:") || imageUrl.startsWith("blob:") ? "" : imageUrl;
+    }
 
     try {
-      const safeName = form.imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const imageRef = ref(storage, `productos/${Date.now()}-${safeName}`);
-      const snapshot = await uploadBytes(imageRef, form.imageFile);
-      return await getDownloadURL(snapshot.ref);
+      return await subirImagenACloudinary(form.imageFile, "farmagen/productos");
     } catch (error) {
       console.error("Error subiendo imagen de producto:", error);
-      throw new Error("Error al subir la imagen");
-    }
-  };
-
-  const tryDeleteStorageImage = async (imageUrl) => {
-    if (!imageUrl || !String(imageUrl).includes("firebasestorage")) return;
-
-    try {
-      await deleteObject(ref(storage, imageUrl));
-    } catch (error) {
-      console.error("Error eliminando imagen de producto en Storage:", error);
-      // Si la URL no corresponde a Storage o ya no existe, no detenemos la eliminación del producto.
+      throw new Error(error.message || "Error al subir la imagen");
     }
   };
 
@@ -146,7 +136,7 @@ export default function AdminProducts() {
         }
       } catch (error) {
         console.error("Error actualizando producto desde admin:", error);
-        showNotif(error.message === "Error al subir la imagen" ? "Error al subir la imagen" : "Error al actualizar producto");
+        showNotif(error.message || "Error al actualizar producto");
       } finally {
         setSaving(false);
       }
@@ -167,7 +157,7 @@ export default function AdminProducts() {
         }
       } catch (error) {
         console.error("Error guardando producto desde admin:", error);
-        showNotif(error.message === "Error al subir la imagen" ? "Error al subir la imagen" : "Error al guardar el producto");
+        showNotif(error.message || "Error al guardar el producto");
       } finally {
         setSaving(false);
       }
@@ -180,10 +170,8 @@ export default function AdminProducts() {
       return;
     }
 
-    const prod = products.find(p => p.id === id);
     const result = await deleteProduct(id);
     if (result.success) {
-      await tryDeleteStorageImage(prod?.imagenUrl || prod?.imageUrl || prod?.image);
       setConfirmDelete(null);
     }
     showNotif(result.message);
@@ -199,8 +187,8 @@ export default function AdminProducts() {
       showNotif("La descripciÃ³n no puede superar 300 caracteres");
       return;
     }
-    if (name === "image" && value.length > PRODUCT_LIMITS.text) {
-      showNotif("Este campo no puede superar 100 caracteres");
+    if (name === "image" && value.length > PRODUCT_LIMITS.imageUrl) {
+      showNotif("La URL de imagen no puede superar 500 caracteres");
       return;
     }
     if ((name === "price" || name === "stock") && Number(value) > PRODUCT_LIMITS.priceMax) {
@@ -210,6 +198,13 @@ export default function AdminProducts() {
     if ((name === "price" || name === "stock") && Number(value) < 0) {
       showNotif(name === "price" ? "El precio debe ser mayor a 0" : "El stock no puede ser negativo");
       return;
+    }
+    if ((name === "price" || name === "stock") && value !== "" && Number(value) === PRODUCT_LIMITS.priceMax) {
+      showNotif(name === "price" ? "El precio no puede ser mayor a 9999" : "El stock no puede ser mayor a 9999");
+    }
+    const textLimits = { name: PRODUCT_LIMITS.name, specs: PRODUCT_LIMITS.description, image: PRODUCT_LIMITS.imageUrl };
+    if (textLimits[name]) {
+      notifyLimitReached({ fieldName: name, value, limit: textLimits[name], notify: showNotif });
     }
     setForm(prev => ({
       ...prev,
@@ -221,9 +216,11 @@ export default function AdminProducts() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (!file.type.startsWith("image/")) {
-        showNotif("Error: Solo se permiten archivos de imagen.");
-        e.target.value = ""; // Reset input
+      try {
+        validarImagenCloudinary(file);
+      } catch (error) {
+        showNotif(error.message);
+        e.target.value = "";
         return;
       }
       const reader = new FileReader();
@@ -326,11 +323,11 @@ export default function AdminProducts() {
               </div>
               <div className="form-group">
                 <label className="form-label">Cargar Imagen desde el Dispositivo</label>
-                <input type="file" accept="image/*" onChange={handleFileChange} className="form-input" style={{ color: '#94a3b8' }} />
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="form-input" style={{ color: '#94a3b8' }} />
               </div>
               <div className="form-group">
                 <label className="form-label">O escribir URL de Imagen</label>
-                <input type="url" name="image" maxLength={100} value={form.imageFile ? "" : form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
+                <input type="url" name="image" maxLength={500} value={form.imageFile ? "" : form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
               </div>
               {form.image && (
                 <div className="form-group">

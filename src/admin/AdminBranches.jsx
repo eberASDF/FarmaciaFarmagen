@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useApp } from "../context/AppContext";
-import { storage } from "../firebase/config";
+import { subirImagenACloudinary, validarImagenCloudinary } from "../services/cloudinaryService";
+import { FORM_LIMITS, notifyLimitReached } from "../utils/formLimits";
 
 export default function AdminBranches() {
   const { branches, addBranch, updateBranch, deleteBranch, toggleBranch } = useApp();
@@ -9,6 +9,7 @@ export default function AdminBranches() {
   const [editingBranch, setEditingBranch] = useState(null);
   const [notification, setNotification] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const emptyForm = { name: "", address: "", phone: "", hours: "", image: "", imageFile: null };
   const [form, setForm] = useState(emptyForm);
@@ -43,60 +44,79 @@ export default function AdminBranches() {
       showNotif("Falta completar campos obligatorios");
       return;
     }
-    if (form.name.length > 50 || form.address.length > 100 || form.phone.length > 100 || form.hours.length > 100) {
+    if (form.name.length > 50 || form.address.length > 100 || form.phone.length > FORM_LIMITS.phone || form.hours.length > 100) {
+      if (form.phone.length > FORM_LIMITS.phone) {
+        showNotif("El teléfono no puede superar 20 caracteres.");
+        return;
+      }
       showNotif(form.name.length > 50 ? "El nombre no puede superar 50 caracteres" : "Este campo no puede superar 100 caracteres");
       return;
     }
 
-    let imageUrl = "";
+    setSaving(true);
     try {
-      imageUrl = await uploadBranchImage();
+      const imageUrl = await uploadBranchImage();
+      const payload = { ...form, image: imageUrl, imagenUrl: imageUrl };
+      const result = editingBranch
+        ? await updateBranch(editingBranch.id, payload)
+        : await addBranch(payload);
+
+      showNotif(result.message);
+      if (result.success) {
+        setShowModal(false);
+        setForm(emptyForm);
+      }
     } catch (error) {
-      showNotif(error.message === "Error al subir la imagen" ? "Error al subir la imagen" : "Error al guardar la sucursal");
-      return;
+      console.error("Error guardando sucursal desde admin:", error);
+      showNotif(error.message || "Error al guardar la sucursal");
+    } finally {
+      setSaving(false);
     }
-
-    const payload = { ...form, image: imageUrl, imagenUrl: imageUrl };
-
-    if (editingBranch) {
-      const result = await updateBranch(editingBranch.id, payload);
-      showNotif(result.message);
-      if (!result.success) return;
-    } else {
-      const result = await addBranch(payload);
-      showNotif(result.message);
-      if (!result.success) return;
-    }
-    setShowModal(false);
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const limit = name === "name" ? 50 : 100;
+    const limit = name === "name" ? 50 : name === "phone" ? FORM_LIMITS.phone : name === "image" ? 500 : 100;
     if (value.length > limit) {
+      if (name === "image") {
+        showNotif("La URL de imagen no puede superar 500 caracteres");
+        return;
+      }
+      if (name === "phone") {
+        showNotif("El telefono no puede superar 20 caracteres");
+        return;
+      }
       showNotif(name === "name" ? "El nombre no puede superar 50 caracteres" : "Este campo no puede superar 100 caracteres");
       return;
     }
+    notifyLimitReached({ fieldName: name, value, limit, notify: showNotif });
     setForm(prev => ({ ...prev, [name]: value, ...(name === "image" ? { imageFile: null } : {}) }));
   };
 
   const uploadBranchImage = async () => {
-    if (!form.imageFile) return form.image.trim();
+    if (!form.imageFile) {
+      const imageUrl = form.image.trim();
+      return imageUrl.startsWith("data:") || imageUrl.startsWith("blob:") ? "" : imageUrl;
+    }
 
     try {
-      const safeName = form.imageFile.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const imageRef = ref(storage, `sucursales/${Date.now()}-${safeName}`);
-      const snapshot = await uploadBytes(imageRef, form.imageFile);
-      return await getDownloadURL(snapshot.ref);
+      return await subirImagenACloudinary(form.imageFile, "farmagen/sucursales");
     } catch (error) {
       console.error("Error subiendo imagen de sucursal:", error);
-      throw new Error("Error al subir la imagen");
+      throw new Error(error.message || "Error al subir la imagen");
     }
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      try {
+        validarImagenCloudinary(file);
+      } catch (error) {
+        showNotif(error.message);
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setForm(prev => ({ ...prev, image: reader.result, imageFile: file }));
@@ -179,7 +199,7 @@ export default function AdminBranches() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Teléfono *</label>
-                  <input type="tel" name="phone" required maxLength={100} pattern="[0-9\s()+]*" value={form.phone} onChange={handleChange} className="form-input" />
+                  <input type="tel" name="phone" required maxLength={FORM_LIMITS.phone} pattern="[0-9\s()+]*" value={form.phone} onChange={handleChange} className="form-input" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Horario *</label>
@@ -189,12 +209,12 @@ export default function AdminBranches() {
               
               <div className="form-group">
                 <label className="form-label">Cargar Foto de Sucursal</label>
-                <input type="file" accept="image/*" onChange={handleFileChange} className="form-input" style={{ color: '#94a3b8' }} />
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} className="form-input" style={{ color: '#94a3b8' }} />
               </div>
 
               <div className="form-group">
                 <label className="form-label">O escribir URL de Imagen</label>
-                <input type="url" name="image" maxLength={100} value={form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
+                <input type="url" name="image" maxLength={500} value={form.imageFile ? "" : form.image} onChange={handleChange} className="form-input" placeholder="https://..." />
               </div>
 
               {form.image && (
@@ -206,7 +226,7 @@ export default function AdminBranches() {
 
               <div className="modal-actions">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-outline">Cancelar</button>
-                <button type="submit" className="btn-primary" id="save-branch-btn">{editingBranch ? "Guardar Cambios" : "Agregar Sucursal"}</button>
+                <button type="submit" className="btn-primary" id="save-branch-btn" disabled={saving}>{saving ? "Guardando..." : editingBranch ? "Guardar Cambios" : "Agregar Sucursal"}</button>
               </div>
             </form>
           </div>

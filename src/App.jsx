@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider } from "./context/AppContext";
 import VerifiedRoute from "./components/VerifiedRoute";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Public pages
 import Layout from "./pages/Layout";
@@ -10,6 +11,8 @@ import ProductDetail from "./pages/ProductDetail";
 import BranchesPage from "./pages/BranchesPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import AccountPage from "./pages/AccountPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
@@ -30,6 +33,7 @@ export default function App() {
   return (
     <AppProvider>
       <BrowserRouter basename={routerBasename}>
+        <ScrollToTop />
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Layout />}>
@@ -39,6 +43,8 @@ export default function App() {
             <Route path="branches" element={<BranchesPage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
+            <Route path="recuperar-contrasena" element={<ForgotPasswordPage />} />
+            <Route path="restablecer-contrasena" element={<ResetPasswordPage />} />
             <Route path="account" element={<VerifiedRoute><AccountPage /></VerifiedRoute>} />
             <Route path="checkout" element={<VerifiedRoute><CheckoutPage /></VerifiedRoute>} />
           </Route>
